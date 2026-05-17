@@ -1,0 +1,52 @@
+# Micro Transaction Ledger
+
+Digital banking ledger for keeping track of transactions between accounts. 
+
+TODO: add screenshot/GIF of UI demo
+
+## Basic requirements
+- Payments between accounts
+- Audit trail - ledger with immutable entries
+- Account balance tracking/retrieval
+- Simple transaction statuses with reasoning; Pending, Rejected, Authorised
+- Demo UI for sending payments and for visualisation purposes
+- Concepts to implement: microservices, choreographed saga pattern (async messaging), idempotency, delayed retries, gRPC, context etc
+
+## Design
+
+TODO: add architecture diagram, design choices (high level), techstack, note UI is for demo only
+
+## Trade-offs
+
+TODO: explain trade-offs, cap theorem etc
+
+## Running the ledger
+
+TODO: setup, prerequisites, running etc
+
+## Testing
+
+TODO: unit testing, coverage, additional strategies etc
+
+## Future additions
+
+TODO: known issues, features to add next
+
+## Dev TODO List
+
+- [ ] Setup base repo w/ all APIs (incl. health check endpoints), databases, simple API gateway (nginx) which are orchestrated using docker compose
+- [ ] Figure out what tools to use for databases, seeding, migrations etc
+- [ ] Design and setup accounts, fraud, transactions schema
+- [ ] Setup RabbitMQ
+- [ ] Implement first stage of payment process; updating account/balances and use outbox pattern for corresponding async messages to RabbitMQ
+- [ ] Update fraud service to subscribe to payment message and handle with harcoded "happy" result for now
+- [ ] Update transaction service to subscribe to fraud pass/success message and update transactions
+- [ ] After happy path is ok, update fraud service to handle "mock" fraud scenario and publish fraud fail message (for compensating transaction)
+- [ ] Update accounts service to subscribe to transaction canceleld message and update balance etc
+- [ ] Build simple UI for demo/visualisation purposes
+- [ ] Ensure payments are idempotent
+- [ ] Add retry mechanisms
+- [ ] Utilise Goroutines where appropriate
+- [ ] Use context appropriately
+- [ ] Unit test coverage
+- [ ] Update services to use gRPC (internal comms only)
