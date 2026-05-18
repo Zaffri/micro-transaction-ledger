@@ -24,23 +24,33 @@ TODO: explain trade-offs, cap theorem etc
 
 TODO: setup, prerequisites, running etc
 
+Accessing RabbitMQ dashboard: `http://localhost:8080/queue`
+- Username: guest
+- Password: guest
+
 ## Testing
 
 TODO: unit testing, coverage, additional strategies etc
 
 ## Future additions
 
-TODO: known issues, features to add next, currency GBP assumed
+TODO: known issues, features to add next, 
+
+- no authentication or authorisation for simplicity as the focus was on general system design techniques listed at top of README. Could revisit to add.
+- currency GBP assumed
+
 
 ## Useful docs/reading material
 * Dealing with currency https://cardinalby.github.io/blog/post/best-practices/storing-currency-values-data-types/#1-integer-number-of-minor-units
+* RabbitMQ https://www.rabbitmq.com/tutorials/tutorial-one-go
+* Golang DB access https://www.alexedwards.net/blog/organising-database-access
 
 ## Dev TODO List
 
 - [x] Setup base repo w/ all APIs (incl. health check endpoints), databases, simple API gateway (nginx) which are orchestrated using docker compose
 - [ ] Figure out what tools to use for databases, seeding, migrations etc
-- [ ] Design and setup accounts, fraud, transactions schema
-- [ ] Setup RabbitMQ
+- [x] Design and setup accounts, fraud, transactions schema
+- [x] Setup RabbitMQ
 - [ ] Implement first stage of payment process; updating account/balances and use outbox pattern for corresponding async messages to RabbitMQ
 - [ ] Update fraud service to subscribe to payment message and handle with harcoded "happy" result for now
 - [ ] Update transaction service to subscribe to fraud pass/success message and update transactions
