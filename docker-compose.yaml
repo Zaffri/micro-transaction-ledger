@@ -14,6 +14,8 @@ services:
     build: 
       context: ./accounts
     container_name: accounts-service
+    environment:
+      - PORT=8081
     develop:
       watch:
         - action: rebuild
@@ -23,6 +25,8 @@ services:
     build: 
       context: ./transactions
     container_name: transactions-service
+    environment:
+      - PORT=8081
     develop:
       watch:
         - action: rebuild
@@ -32,6 +36,8 @@ services:
     build: 
       context: ./fraud
     container_name: fraud-service
+    environment:
+      - PORT=8081
     develop:
       watch:
         - action: rebuild

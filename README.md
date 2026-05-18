@@ -30,11 +30,14 @@ TODO: unit testing, coverage, additional strategies etc
 
 ## Future additions
 
-TODO: known issues, features to add next
+TODO: known issues, features to add next, currency GBP assumed
+
+## Useful docs/reading material
+* Dealing with currency https://cardinalby.github.io/blog/post/best-practices/storing-currency-values-data-types/#1-integer-number-of-minor-units
 
 ## Dev TODO List
 
-- [ ] Setup base repo w/ all APIs (incl. health check endpoints), databases, simple API gateway (nginx) which are orchestrated using docker compose
+- [x] Setup base repo w/ all APIs (incl. health check endpoints), databases, simple API gateway (nginx) which are orchestrated using docker compose
 - [ ] Figure out what tools to use for databases, seeding, migrations etc
 - [ ] Design and setup accounts, fraud, transactions schema
 - [ ] Setup RabbitMQ
