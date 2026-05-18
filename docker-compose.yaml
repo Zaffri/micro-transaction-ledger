@@ -10,6 +10,13 @@ services:
     environment:
       - NGINX_PORT=8080
 
+  rabbitmq:
+    image: rabbitmq:4.3.0-management-alpine
+    container_name: rabbitmq
+    restart: on-failure
+    environment:
+      - 'RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS=-rabbitmq_management path_prefix "/queue"'
+
   accounts-service:
     build: 
       context: ./accounts
