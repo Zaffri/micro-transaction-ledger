@@ -27,6 +27,7 @@ services:
     environment:
       - PORT=8081
       - DATABASE_CONNECTION=postgres://user:pass@accounts-db:5432/accounts # dev only
+      - RABBITMQ_CONNECTION=amqp://guest:guest@rabbitmq:5672 # dev only
     develop:
       watch:
         - action: rebuild
@@ -43,7 +44,7 @@ services:
       - POSTGRES_DB=accounts
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -h localhost -p 5432"]
-      interval: 5s
+      interval: 3s
       timeout: 5s
       retries: 5
   
