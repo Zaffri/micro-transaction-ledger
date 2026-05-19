@@ -21,12 +21,31 @@ services:
     build: 
       context: ./accounts
     container_name: accounts-service
+    depends_on:
+      accounts-db:
+        condition: service_healthy
     environment:
       - PORT=8081
+      - DATABASE_CONNECTION=postgres://user:pass@accounts-db:5432/accounts # dev only
     develop:
       watch:
         - action: rebuild
           path: ./accounts
+
+  accounts-db:
+    image: postgres:14.23-alpine
+    container_name: accounts-db
+    restart: always
+    shm_size: 128mb
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=pass # dev only
+      - POSTGRES_DB=accounts
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h localhost -p 5432"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
   
   transactions-service:
     build: 

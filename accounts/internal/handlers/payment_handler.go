@@ -13,7 +13,7 @@ type PaymentRequest struct {
 	AmountInPennies int `json:"amountInPennies" binding:"required"`
 }
 
-func PaymentHandler(ctx *gin.Context) {
+func (handler *AccountHandler) PaymentHandler(ctx *gin.Context) {
 	var paymentRequest PaymentRequest
 	err := ctx.BindJSON(&paymentRequest)
 
