@@ -1,19 +1,30 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 
 	"github.com/Zaffri/micro-transaction-ledger/accounts/internal/router"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func main() {
-	router := router.GetRoutes()
+	conn, err := pgxpool.New(context.Background(), os.Getenv("DATABASE_CONNECTION"))
+
+	if err != nil {
+		log.Printf("Unable to connect to database: %v\n", err)
+		os.Exit(1)
+	}
+
+	defer conn.Close()
+
+	router := router.GetRoutes(conn)
 
 	// TODO: set timeouts?
-	err := http.ListenAndServe(getServiceAddress(), router)
+	err = http.ListenAndServe(getServiceAddress(), router)
 
 	if err != nil {
 		log.Fatalf("Server error: %v", err)

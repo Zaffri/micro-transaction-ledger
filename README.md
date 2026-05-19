@@ -22,15 +22,23 @@ TODO: explain trade-offs, cap theorem etc
 
 ## Running the ledger
 
-TODO: setup, prerequisites, running etc
+TODO: setup, prerequisites (docker), running etc
+
+## Testing
+
+TODO: unit testing, coverage, additional strategies etc
+
+## Development
 
 Accessing RabbitMQ dashboard: `http://localhost:8080/queue`
 - Username: guest
 - Password: guest
 
-## Testing
+TODO: talk about sqlc
 
-TODO: unit testing, coverage, additional strategies etc
+```bash
+sqlc generate
+```
 
 ## Future additions
 
