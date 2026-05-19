@@ -7,21 +7,28 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/Zaffri/micro-transaction-ledger/accounts/internal/rabbitmq"
 	"github.com/Zaffri/micro-transaction-ledger/accounts/internal/router"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func main() {
-	conn, err := pgxpool.New(context.Background(), os.Getenv("DATABASE_CONNECTION"))
+	db, err := pgxpool.New(context.Background(), os.Getenv("DATABASE_CONNECTION"))
 
 	if err != nil {
 		log.Printf("Unable to connect to database: %v\n", err)
 		os.Exit(1)
 	}
 
-	defer conn.Close()
+	defer db.Close()
+	log.Println("Successfully connected to postgres database.")
 
-	router := router.GetRoutes(conn)
+	rabbitClient := rabbitmq.GetClient(os.Getenv("RABBITMQ_CONNECTION"))
+	defer rabbitClient.Close()
+
+	log.Println("Successfully connected to RabbitMQ")
+
+	router := router.GetRoutes(db)
 
 	// TODO: set timeouts?
 	err = http.ListenAndServe(getServiceAddress(), router)

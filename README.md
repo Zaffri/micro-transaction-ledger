@@ -40,6 +40,8 @@ TODO: talk about sqlc
 sqlc generate
 ```
 
+TODO: might need to rebuild container when making seed/migration changes for now - use proper tool later.
+
 ## Future additions
 
 TODO: known issues, features to add next, 
@@ -50,13 +52,14 @@ TODO: known issues, features to add next,
 
 ## Useful docs/reading material
 * Dealing with currency https://cardinalby.github.io/blog/post/best-practices/storing-currency-values-data-types/#1-integer-number-of-minor-units
-* RabbitMQ https://www.rabbitmq.com/tutorials/tutorial-one-go
+* RabbitMQ intro https://www.rabbitmq.com/tutorials/tutorial-one-go
+* RabbitMQ pub/sub and exchanges: https://www.rabbitmq.com/tutorials/tutorial-three-go
 * Golang DB access https://www.alexedwards.net/blog/organising-database-access
 
 ## Dev TODO List
 
 - [x] Setup base repo w/ all APIs (incl. health check endpoints), databases, simple API gateway (nginx) which are orchestrated using docker compose
-- [ ] Figure out what tools to use for databases, seeding, migrations etc
+- [x] Figure out what tools to use for databases, seeding, migrations etc
 - [x] Design and setup accounts, fraud, transactions schema
 - [x] Setup RabbitMQ
 - [ ] Implement first stage of payment process; updating account/balances and use outbox pattern for corresponding async messages to RabbitMQ
@@ -71,3 +74,9 @@ TODO: known issues, features to add next,
 - [ ] Use context appropriately
 - [ ] Unit test coverage
 - [ ] Update services to use gRPC (internal comms only)
+
+```bash
+curl -i -X POST http://localhost:8080/accounts/payment -d '{"AmountInPennies":1000,"fromAccountId": 1, "toAccountId": 3}'
+
+curl -i -X GET http://localhost:8080/accounts/1
+```
