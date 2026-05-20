@@ -5,6 +5,9 @@ go 1.25.0
 require (
 	github.com/gin-gonic/gin v1.12.0
 	github.com/jackc/pgx/v5 v5.9.2
+	github.com/rabbitmq/amqp091-go v1.11.0
+	github.com/riverqueue/river v0.37.1
+	github.com/riverqueue/river/riverdriver/riverpgxv5 v0.37.1
 )
 
 require (
@@ -33,10 +36,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/quic-go/qpack v0.6.0 // indirect
 	github.com/quic-go/quic-go v0.59.0 // indirect
-	github.com/rabbitmq/amqp091-go v1.11.0 // indirect
-	github.com/riverqueue/river v0.37.1 // indirect
 	github.com/riverqueue/river/riverdriver v0.37.1 // indirect
-	github.com/riverqueue/river/riverdriver/riverpgxv5 v0.37.1 // indirect
 	github.com/riverqueue/river/rivershared v0.37.1 // indirect
 	github.com/riverqueue/river/rivertype v0.37.1 // indirect
 	github.com/stretchr/testify v1.11.1 // indirect

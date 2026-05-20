@@ -61,7 +61,7 @@ func (client *RabbitMQClient) PublishPayment(ctx context.Context, routingKey str
 		false,      // Immediate
 		amqp.Publishing{
 			ContentType:  "application/json",
-			DeliveryMode: amqp.Persistent,
+			DeliveryMode: amqp.Persistent, // write messages to disk
 			Body:         body,
 		},
 	)

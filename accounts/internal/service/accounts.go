@@ -26,6 +26,8 @@ type PaymentRequest struct {
 	AmountInPennies int64 `json:"amountInPennies" binding:"required"`
 }
 
+const PAYMENT_STARTED_ROUTING_KEY = "account.payment.started"
+
 func (service *AccountsService) UpdateBalance(ctx context.Context, senderAccountId int64, receiverAccountId int64, amountInPennies int64) error {
 	// TODO: add overdraft logic
 	// TODO: add custom error structs for logging
@@ -178,7 +180,7 @@ func (service *AccountsService) sendPaymentStartedMessage(
 	}
 
 	_, err = service.RiverClient.InsertTx(ctx, tx, jobs.RabbitMQPublishArgs{
-		RoutingKey: "account.payment.started",
+		RoutingKey: PAYMENT_STARTED_ROUTING_KEY,
 		Payload:    messagePayload,
 	}, nil)
 
