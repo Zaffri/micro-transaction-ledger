@@ -1,7 +1,7 @@
 version: "2"
 sql:
   - engine: "postgresql"
-    schema: "migrations/" # share schema between API and migration program
+    schema: "cmd/migrate/migrations/" # share schema between API and migration program
     queries: "internal/repository/query.sql"
     gen:
       go:

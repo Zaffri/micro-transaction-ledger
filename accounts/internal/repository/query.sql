@@ -7,6 +7,11 @@ RETURNING id, balance_in_pennies;
 SELECT * FROM accounts
 WHERE id = $1;
 
+-- name: GetAccountForUpdate :one
+SELECT * FROM accounts
+WHERE id = $1
+FOR UPDATE;
+
 -- name: UpdateBalance :exec
 UPDATE accounts
 SET balance_in_pennies = $2,

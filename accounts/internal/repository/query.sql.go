@@ -18,13 +18,13 @@ RETURNING id, balance_in_pennies
 `
 
 type CreateAccountParams struct {
-	BalanceInPennies  pgtype.Int8
+	BalanceInPennies  int64
 	AccountHolderName string
 }
 
 type CreateAccountRow struct {
 	ID               int64
-	BalanceInPennies pgtype.Int8
+	BalanceInPennies int64
 }
 
 func (q *Queries) CreateAccount(ctx context.Context, arg CreateAccountParams) (CreateAccountRow, error) {
@@ -52,6 +52,25 @@ func (q *Queries) GetAccount(ctx context.Context, id int64) (Account, error) {
 	return i, err
 }
 
+const getAccountForUpdate = `-- name: GetAccountForUpdate :one
+SELECT id, balance_in_pennies, account_holder_name, created_at, updated_at FROM accounts
+WHERE id = $1
+FOR UPDATE
+`
+
+func (q *Queries) GetAccountForUpdate(ctx context.Context, id int64) (Account, error) {
+	row := q.db.QueryRow(ctx, getAccountForUpdate, id)
+	var i Account
+	err := row.Scan(
+		&i.ID,
+		&i.BalanceInPennies,
+		&i.AccountHolderName,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const updateBalance = `-- name: UpdateBalance :exec
 UPDATE accounts
 SET balance_in_pennies = $2,
@@ -61,7 +80,7 @@ WHERE id = $1
 
 type UpdateBalanceParams struct {
 	ID               int64
-	BalanceInPennies pgtype.Int8
+	BalanceInPennies int64
 	UpdatedAt        pgtype.Timestamp
 }
 

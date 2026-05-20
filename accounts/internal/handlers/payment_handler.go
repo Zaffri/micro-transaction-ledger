@@ -8,9 +8,9 @@ import (
 )
 
 type PaymentRequest struct {
-	FromAccountId   int `json:"fromAccountId" binding:"required"`
-	ToAccountId     int `json:"toAccountId" binding:"required"`
-	AmountInPennies int `json:"amountInPennies" binding:"required"`
+	SenderAccountId   int64 `json:"senderAccountId" binding:"required"`
+	ReceiverAccountId int64 `json:"receiverAccountId" binding:"required"`
+	AmountInPennies   int64 `json:"amountInPennies" binding:"required"`
 }
 
 func (handler *AccountHandler) PaymentHandler(ctx *gin.Context) {
@@ -27,7 +27,19 @@ func (handler *AccountHandler) PaymentHandler(ctx *gin.Context) {
 
 	// Note: no auth/ownership checks for simplicity - obviously wouldn't do this in real project
 
-	// Atomically, check balance for funds, if ok update and create outbox...
+	err = handler.AccountsService.UpdateBalance(
+		ctx,
+		paymentRequest.SenderAccountId,
+		paymentRequest.ReceiverAccountId,
+		paymentRequest.AmountInPennies,
+	)
 
-	ctx.JSON(http.StatusOK, gin.H{"status": "ok"})
+	if err != nil {
+		// TODO: handle different scenarios w/ status codes
+		log.Printf("Payment failed: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"success": false})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"success": true})
 }

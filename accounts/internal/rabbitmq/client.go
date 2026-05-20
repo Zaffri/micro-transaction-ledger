@@ -1,6 +1,7 @@
 package rabbitmq
 
 import (
+	"context"
 	"log"
 	"os"
 
@@ -12,6 +13,9 @@ type RabbitMQClient struct {
 	channel    *amqp.Channel
 }
 
+const EXCHANGE_NAME = "acounts-service.events"
+
+// TODO: return error and handle in main
 func GetClient(connectionString string) *RabbitMQClient {
 	// TODO: add try mechanism?
 	conn, err := amqp.Dial(connectionString)
@@ -21,8 +25,6 @@ func GetClient(connectionString string) *RabbitMQClient {
 		os.Exit(1)
 	}
 
-	defer conn.Close()
-
 	ch, err := conn.Channel()
 
 	if err != nil {
@@ -30,10 +32,8 @@ func GetClient(connectionString string) *RabbitMQClient {
 		os.Exit(1)
 	}
 
-	defer ch.Close()
-
 	err = ch.ExchangeDeclare(
-		"acounts-service.events",
+		EXCHANGE_NAME,
 		"topic",
 		true,  // durability
 		false, // delete when unused
@@ -53,8 +53,18 @@ func GetClient(connectionString string) *RabbitMQClient {
 	}
 }
 
-func (client *RabbitMQClient) PublishPayment() {
-	// TODO: publish message to payment queue
+func (client *RabbitMQClient) PublishPayment(ctx context.Context, routingKey string, body []byte) error {
+	return client.channel.PublishWithContext(ctx,
+		EXCHANGE_NAME,
+		routingKey, // e.g. "accounts.payment.started"
+		false,      // Mandatory
+		false,      // Immediate
+		amqp.Publishing{
+			ContentType:  "application/json",
+			DeliveryMode: amqp.Persistent,
+			Body:         body,
+		},
+	)
 }
 
 func (client *RabbitMQClient) Close() {
