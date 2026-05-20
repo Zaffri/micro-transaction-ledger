@@ -10,7 +10,7 @@ TODO: add screenshot/GIF of UI demo
 - Account balance tracking/retrieval
 - Simple transaction statuses with reasoning; Pending, Rejected, Authorised
 - Demo UI for sending payments and for visualisation purposes
-- Concepts to implement: microservices, choreographed saga pattern (async messaging), idempotency, delayed retries, gRPC, context etc
+- Concepts to implement: microservices, choreographed saga pattern (async messaging), idempotency, delayed retries, gRPC, context, optimistic updates?, dead letter queues? etc
 
 ## Design
 
@@ -51,10 +51,11 @@ TODO: known issues, features to add next,
 
 
 ## Useful docs/reading material
-* Dealing with currency https://cardinalby.github.io/blog/post/best-practices/storing-currency-values-data-types/#1-integer-number-of-minor-units
-* RabbitMQ intro https://www.rabbitmq.com/tutorials/tutorial-one-go
+* Dealing with currency: https://cardinalby.github.io/blog/post/best-practices/storing-currency-values-data-types/#1-integer-number-of-minor-units
+* RabbitMQ intro: https://www.rabbitmq.com/tutorials/tutorial-one-go
 * RabbitMQ pub/sub and exchanges: https://www.rabbitmq.com/tutorials/tutorial-three-go
-* Golang DB access https://www.alexedwards.net/blog/organising-database-access
+* River docs: https://riverqueue.com/docs
+* Golang DB access: https://www.alexedwards.net/blog/organising-database-access
 
 ## Dev TODO List
 
@@ -76,7 +77,7 @@ TODO: known issues, features to add next,
 - [ ] Update services to use gRPC (internal comms only)
 
 ```bash
-curl -i -X POST http://localhost:8080/accounts/payment -d '{"AmountInPennies":1000,"fromAccountId": 1, "toAccountId": 3}'
+curl -i -X POST http://localhost:8080/accounts/payment -d '{"AmountInPennies":1000,"senderAccountId": 1, "receiverAccountId": 3}'
 
 curl -i -X GET http://localhost:8080/accounts/1
 ```

@@ -10,7 +10,7 @@ import (
 
 type Account struct {
 	ID                int64
-	BalanceInPennies  pgtype.Int8
+	BalanceInPennies  int64
 	AccountHolderName string
 	CreatedAt         pgtype.Timestamp
 	UpdatedAt         pgtype.Timestamp

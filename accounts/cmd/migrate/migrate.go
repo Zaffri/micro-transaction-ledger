@@ -7,6 +7,9 @@ import (
 	"os"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/riverqueue/river/riverdriver/riverpgxv5"
+	"github.com/riverqueue/river/rivermigrate"
 )
 
 // TODO: use proper migration tool: read all scripts from migration/*, and remove copies of seed insert SQL
@@ -19,31 +22,28 @@ var seedSql string
 
 func main() {
 	ctx := context.Background()
-	log.Printf("Connecting.... %s", os.Getenv("DATABASE_CONNECTION"))
-	db, err := pgx.Connect(ctx, os.Getenv("DATABASE_CONNECTION"))
+	log.Println("Starting migration...")
+	dbPool, err := pgxpool.New(ctx, os.Getenv("DATABASE_CONNECTION"))
 
 	if err != nil {
-		log.Printf("Migration: Unable to connect to database: %v\n", err)
-		os.Exit(1)
+		log.Fatalf("Migration: Unable to connect to database: %v\n", err)
 	}
 
-	defer db.Close(ctx)
-	run(ctx, db)
+	defer dbPool.Close()
+	run(ctx, dbPool)
 }
 
-func run(ctx context.Context, db *pgx.Conn) error {
+func run(ctx context.Context, db *pgxpool.Pool) error {
 	_, err := db.Exec(ctx, schemaSql)
 
 	if err != nil {
-		log.Printf("Failed to run database migration: %v", err)
-		return err
+		log.Fatalf("Failed to run database migration: %v", err)
 	}
 
 	txn, err := db.BeginTx(ctx, pgx.TxOptions{})
 
 	if err != nil {
-		log.Printf("Failed to begin seed txn: %v", err)
-		return err
+		log.Fatalf("Failed to begin seed txn: %v", err)
 	}
 
 	defer txn.Rollback(ctx)
@@ -51,23 +51,26 @@ func run(ctx context.Context, db *pgx.Conn) error {
 	_, err = txn.Exec(ctx, seedSql, 1000, "John Doe")
 
 	if err != nil {
-		log.Printf("Failed to seed txn: %v", err)
-		return err
+		log.Fatalf("Failed to seed txn: %v", err)
 	}
 
 	_, err = txn.Exec(ctx, seedSql, 5000, "Jane Doe")
 
 	if err != nil {
-		log.Printf("Failed to seed txn: %v", err)
-		return err
+		log.Fatalf("Failed to seed txn: %v", err)
 	}
 
 	err = txn.Commit(ctx)
 
 	if err != nil {
-		log.Printf("Failed to commit seed txn: %v", err)
-		return err
+		log.Fatalf("Failed to commit seed txn: %v", err)
 	}
 
+	migrator, err := rivermigrate.New(riverpgxv5.New(db), nil)
+	_, err = migrator.Migrate(ctx, rivermigrate.DirectionUp, nil)
+
+	if err != nil {
+		log.Fatalf("Failed to run River migrations: %v", err)
+	}
 	return err
 }

@@ -25,7 +25,7 @@ func (handler *AccountHandler) GetAccount(ctx *gin.Context) {
 		return
 	}
 
-	account, err := handler.AccountsService.Repo.GetAccount(ctx, accountId)
+	account, err := handler.AccountsService.Queries.GetAccount(ctx, accountId)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
