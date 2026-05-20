@@ -47,17 +47,6 @@ services:
       interval: 3s
       timeout: 5s
       retries: 5
-  
-  transactions-service:
-    build: 
-      context: ./transactions
-    container_name: transactions-service
-    environment:
-      - PORT=8081
-    develop:
-      watch:
-        - action: rebuild
-          path: ./transactions
 
   fraud-service:
     build: 

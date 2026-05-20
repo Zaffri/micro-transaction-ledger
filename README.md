@@ -55,6 +55,7 @@ TODO: known issues, features to add next,
 * RabbitMQ intro: https://www.rabbitmq.com/tutorials/tutorial-one-go
 * RabbitMQ pub/sub and exchanges: https://www.rabbitmq.com/tutorials/tutorial-three-go
 * River docs: https://riverqueue.com/docs
+* Postgres constraints: https://www.postgresql.org/docs/current/ddl-constraints.html
 * Golang DB access: https://www.alexedwards.net/blog/organising-database-access
 
 ## Dev TODO List

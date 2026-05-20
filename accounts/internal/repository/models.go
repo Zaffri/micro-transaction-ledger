@@ -5,13 +5,77 @@
 package repository
 
 import (
+	"database/sql/driver"
+	"fmt"
+
 	"github.com/jackc/pgx/v5/pgtype"
 )
+
+type TransactionStatus string
+
+const (
+	TransactionStatusPending  TransactionStatus = "pending"
+	TransactionStatusBooked   TransactionStatus = "booked"
+	TransactionStatusRejected TransactionStatus = "rejected"
+)
+
+func (e *TransactionStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = TransactionStatus(s)
+	case string:
+		*e = TransactionStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for TransactionStatus: %T", src)
+	}
+	return nil
+}
+
+type NullTransactionStatus struct {
+	TransactionStatus TransactionStatus
+	Valid             bool // Valid is true if TransactionStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullTransactionStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.TransactionStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.TransactionStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullTransactionStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.TransactionStatus), nil
+}
 
 type Account struct {
 	ID                int64
 	BalanceInPennies  int64
 	AccountHolderName string
-	CreatedAt         pgtype.Timestamp
-	UpdatedAt         pgtype.Timestamp
+	CreatedAt         pgtype.Timestamptz
+	UpdatedAt         pgtype.Timestamptz
+}
+
+type Transaction struct {
+	ID          int64
+	Status      TransactionStatus
+	Description string
+	AccountID   int64
+	CreatedAt   pgtype.Timestamptz
+	UpdatedAt   pgtype.Timestamptz
+}
+
+type TransactionsLedger struct {
+	ID                  int64
+	TransactionID       int64
+	AccountID           int64
+	OtherPartyAccountID int64
+	AmountInPennies     int64
+	UpdatedAt           pgtype.Timestamptz
 }
