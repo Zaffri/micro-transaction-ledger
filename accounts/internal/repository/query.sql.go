@@ -34,6 +34,54 @@ func (q *Queries) CreateAccount(ctx context.Context, arg CreateAccountParams) (C
 	return i, err
 }
 
+const createTransaction = `-- name: CreateTransaction :one
+INSERT INTO transactions (description, account_id)
+VALUES ($1, $2)
+RETURNING id, status
+`
+
+type CreateTransactionParams struct {
+	Description string
+	AccountID   int64
+}
+
+type CreateTransactionRow struct {
+	ID     int64
+	Status TransactionStatus
+}
+
+func (q *Queries) CreateTransaction(ctx context.Context, arg CreateTransactionParams) (CreateTransactionRow, error) {
+	row := q.db.QueryRow(ctx, createTransaction, arg.Description, arg.AccountID)
+	var i CreateTransactionRow
+	err := row.Scan(&i.ID, &i.Status)
+	return i, err
+}
+
+const createTransactionLedgerEntry = `-- name: CreateTransactionLedgerEntry :one
+INSERT INTO transactions_ledger (transaction_id, account_id, other_party_account_id, amount_in_pennies)
+VALUES ($1, $2, $3, $4)
+RETURNING id
+`
+
+type CreateTransactionLedgerEntryParams struct {
+	TransactionID       int64
+	AccountID           int64
+	OtherPartyAccountID int64
+	AmountInPennies     int64
+}
+
+func (q *Queries) CreateTransactionLedgerEntry(ctx context.Context, arg CreateTransactionLedgerEntryParams) (int64, error) {
+	row := q.db.QueryRow(ctx, createTransactionLedgerEntry,
+		arg.TransactionID,
+		arg.AccountID,
+		arg.OtherPartyAccountID,
+		arg.AmountInPennies,
+	)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
 const getAccount = `-- name: GetAccount :one
 SELECT id, balance_in_pennies, account_holder_name, created_at, updated_at FROM accounts
 WHERE id = $1
@@ -74,14 +122,14 @@ func (q *Queries) GetAccountForUpdate(ctx context.Context, id int64) (Account, e
 const updateBalance = `-- name: UpdateBalance :exec
 UPDATE accounts
 SET balance_in_pennies = $2,
-    updated_at = $3
+  updated_at = $3
 WHERE id = $1
 `
 
 type UpdateBalanceParams struct {
 	ID               int64
 	BalanceInPennies int64
-	UpdatedAt        pgtype.Timestamp
+	UpdatedAt        pgtype.Timestamptz
 }
 
 func (q *Queries) UpdateBalance(ctx context.Context, arg UpdateBalanceParams) error {
