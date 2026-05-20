@@ -8,6 +8,8 @@ CREATE TABLE IF NOT EXISTS accounts (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+DROP TRIGGER IF EXISTS trigger_update_accounts_timestamp ON accounts;
+
 CREATE TRIGGER trigger_update_accounts_timestamp
   BEFORE UPDATE ON accounts
   FOR EACH ROW
@@ -24,6 +26,8 @@ CREATE TABLE IF NOT EXISTS transactions (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+DROP TRIGGER IF EXISTS trigger_update_transactions_timestamp ON transactions;
 
 CREATE TRIGGER trigger_update_transactions_timestamp
   BEFORE UPDATE ON transactions

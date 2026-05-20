@@ -64,7 +64,7 @@ TODO: known issues, features to add next,
 - [x] Figure out what tools to use for databases, seeding, migrations etc
 - [x] Design and setup accounts, fraud, transactions schema
 - [x] Setup RabbitMQ
-- [ ] Implement first stage of payment process; updating account/balances and use outbox pattern for corresponding async messages to RabbitMQ
+- [x] Implement first stage of payment process; updating account/balances and use outbox pattern for corresponding async messages to RabbitMQ
 - [ ] Update fraud service to subscribe to payment message and handle with harcoded "happy" result for now
 - [ ] Update transaction service to subscribe to fraud pass/success message and update transactions
 - [ ] After happy path is ok, update fraud service to handle "mock" fraud scenario and publish fraud fail message (for compensating transaction)

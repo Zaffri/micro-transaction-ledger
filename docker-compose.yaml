@@ -24,6 +24,8 @@ services:
     depends_on:
       accounts-db:
         condition: service_healthy
+      rabbitmq:
+        condition: service_started
     environment:
       - PORT=8081
       - DATABASE_CONNECTION=postgres://user:pass@accounts-db:5432/accounts # dev only
@@ -52,9 +54,31 @@ services:
     build: 
       context: ./fraud
     container_name: fraud-service
+    depends_on:
+      fraud-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
     environment:
       - PORT=8081
+      - DATABASE_CONNECTION=postgres://user:pass@fraud-db:5432/fraud # dev only
+      - RABBITMQ_CONNECTION=amqp://guest:guest@rabbitmq:5672 # dev only
     develop:
       watch:
         - action: rebuild
           path: ./fraud
+
+  fraud-db:
+    image: postgres:14.23-alpine
+    container_name: fraud-db
+    restart: always
+    shm_size: 128mb
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=pass # dev only
+      - POSTGRES_DB=fraud
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h localhost -p 5432"]
+      interval: 3s
+      timeout: 5s
+      retries: 5
