@@ -40,6 +40,15 @@ TODO: talk about sqlc
 sqlc generate
 ```
 
+Import cycles: godepgraph and go list
+
+```bash
+go list -f '{{.ImportPath}} -> {{.Imports}}' ./...
+
+# to clean out ouput use -p to ignore prefixes (comma separated)
+godepgraph -s -novendor -p golang.org,gopkg.in,google.golang.org,go.,github.com/r,github.com/j,github.com/g ./cmd/ | dot -Tpng -o dependencies.png
+```
+
 TODO: might need to rebuild container when making seed/migration changes for now - use proper tool later.
 
 ## Future additions

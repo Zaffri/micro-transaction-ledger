@@ -7,8 +7,11 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/Zaffri/micro-transaction-ledger/fraud/internal/jobs"
 	"github.com/Zaffri/micro-transaction-ledger/fraud/internal/rabbitmq"
+	"github.com/Zaffri/micro-transaction-ledger/fraud/internal/repository"
 	"github.com/Zaffri/micro-transaction-ledger/fraud/internal/router"
+	"github.com/Zaffri/micro-transaction-ledger/fraud/internal/service"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -27,10 +30,22 @@ func main() {
 	defer rabbitClient.Close()
 	log.Println("Successfully connected to RabbitMQ")
 
-	// TODO: could setup pool of workers - single for now
-	go rabbitmq.SetupFraudWorker(rabbitClient)
+	riverManager, err := jobs.NewRiverClient(ctx, db, rabbitClient)
 
-	// TODO: setup river and pass
+	if err != nil {
+		log.Fatalf("Failed to start river (for outbox relay): %v\n", err)
+	}
+
+	defer riverManager.RiverClient.Stop(ctx)
+	log.Println("Successfully started River (outbox relay)")
+
+	// TODO: could setup pool of workers - single for now
+	go rabbitmq.SetupFraudWorker(ctx, rabbitClient, &service.FraudService{
+		Db:            db,
+		Queries:       repository.New(db),
+		OutboxManager: &riverManager,
+	})
+
 	router := router.GetRoutes(db, nil)
 
 	err = http.ListenAndServe(getServiceAddress(), router)

@@ -4,7 +4,7 @@ import (
 	"context"
 	"log"
 
-	"github.com/Zaffri/micro-transaction-ledger/accounts/internal/rabbitmq"
+	"github.com/Zaffri/micro-transaction-ledger/fraud/internal/rabbitmq"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"

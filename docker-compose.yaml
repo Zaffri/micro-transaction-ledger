@@ -16,6 +16,12 @@ services:
     restart: on-failure
     environment:
       - 'RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS=-rabbitmq_management path_prefix "/queue"'
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_port_connectivity"]
+      interval: 4s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
 
   accounts-service:
     build: 
@@ -25,7 +31,7 @@ services:
       accounts-db:
         condition: service_healthy
       rabbitmq:
-        condition: service_started
+        condition: service_healthy
     environment:
       - PORT=8081
       - DATABASE_CONNECTION=postgres://user:pass@accounts-db:5432/accounts # dev only
@@ -46,9 +52,10 @@ services:
       - POSTGRES_DB=accounts
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -h localhost -p 5432"]
-      interval: 3s
+      interval: 4s
       timeout: 5s
-      retries: 5
+      retries: 3
+      start_period: 5s
 
   fraud-service:
     build: 
@@ -58,7 +65,7 @@ services:
       fraud-db:
         condition: service_healthy
       rabbitmq:
-        condition: service_started
+        condition: service_healthy
     environment:
       - PORT=8081
       - DATABASE_CONNECTION=postgres://user:pass@fraud-db:5432/fraud # dev only
@@ -81,4 +88,5 @@ services:
       test: ["CMD-SHELL", "pg_isready -h localhost -p 5432"]
       interval: 3s
       timeout: 5s
-      retries: 5
+      retries: 3
+      start_period: 5s
