@@ -28,16 +28,16 @@ func main() {
 	defer rabbitClient.Close()
 	log.Println("Successfully connected to RabbitMQ")
 
-	riverClient, err := jobs.GetRiverClient(ctx, db, rabbitClient)
+	riverManager, err := jobs.NewRiverClient(ctx, db, rabbitClient)
 
 	if err != nil {
 		log.Fatalf("Failed to start river (for outbox relay): %v\n", err)
 	}
 
-	defer riverClient.Stop(ctx)
+	defer riverManager.RiverClient.Stop(ctx)
 	log.Println("Successfully started River (outbox relay)")
 
-	router := router.GetRoutes(db, riverClient)
+	router := router.GetRoutes(db, riverManager)
 
 	// TODO: set timeouts?
 	err = http.ListenAndServe(getServiceAddress(), router)

@@ -7,17 +7,24 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/Zaffri/micro-transaction-ledger/accounts/internal/jobs"
 	"github.com/Zaffri/micro-transaction-ledger/accounts/internal/repository"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/riverqueue/river"
 )
 
+type OutboxManager interface {
+	SendMessageToOutbox(
+		ctx context.Context,
+		tx pgx.Tx,
+		routingKey string,
+		message []byte,
+	) error
+}
+
 type AccountsService struct {
-	Db          *pgxpool.Pool
-	Queries     *repository.Queries // sqlc
-	RiverClient *river.Client[pgx.Tx]
+	Db      *pgxpool.Pool
+	Queries *repository.Queries // sqlc
+	OutboxManager
 }
 
 type PaymentRequest struct {
@@ -70,8 +77,13 @@ func (service *AccountsService) UpdateBalance(ctx context.Context, senderAccount
 		return err
 	}
 
-	// send message to rabbitmq exchange using outbox pattern
-	err = service.sendPaymentStartedMessage(ctx, tx, transactionRow.ID, senderAccountId, receiverAccountId, amountInPennies)
+	messagePayload, err := getBalanceUpdateMessage(transactionRow.ID, senderAccountId, receiverAccountId, amountInPennies)
+
+	if err != nil {
+		return fmt.Errorf("Failed to prepare balance update message for outbox table: %v", err)
+	}
+
+	err = service.OutboxManager.SendMessageToOutbox(ctx, tx, PAYMENT_STARTED_ROUTING_KEY, messagePayload)
 
 	if err != nil {
 		return err
@@ -163,31 +175,4 @@ func getBalanceUpdateMessage(accountTransactionId, senderAccountId int64, receiv
 	}
 
 	return payload, nil
-}
-
-func (service *AccountsService) sendPaymentStartedMessage(
-	ctx context.Context,
-	tx pgx.Tx,
-	accountTransactionId int64,
-	senderAccountId int64,
-	receiverAccountId int64,
-	amountInPennies int64,
-) error {
-	messagePayload, err := getBalanceUpdateMessage(accountTransactionId, senderAccountId, receiverAccountId, amountInPennies)
-
-	if err != nil {
-		return fmt.Errorf("Failed to prepare balance update message for outbox table: %v", err)
-	}
-
-	_, err = service.RiverClient.InsertTx(ctx, tx, jobs.RabbitMQPublishArgs{
-		RoutingKey: PAYMENT_STARTED_ROUTING_KEY,
-		Payload:    messagePayload,
-	}, nil)
-
-	if err != nil {
-		log.Printf("Failed to update outbox table with balance update message: %v", err)
-		return err
-	}
-
-	return nil
 }

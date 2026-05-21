@@ -13,7 +13,7 @@ type RabbitMQClient struct {
 	channel    *amqp.Channel
 }
 
-const EXCHANGE_NAME = "acounts-service.events"
+const EXCHANGE_NAME = "accounts-service.events"
 
 // TODO: return error and handle in main
 func GetClient(connectionString string) *RabbitMQClient {

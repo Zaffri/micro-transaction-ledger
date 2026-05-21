@@ -1,7 +1,7 @@
 package rabbitmq
 
 import (
-	"encoding/json"
+	"context"
 	"log"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -13,7 +13,8 @@ type RabbitMQClient struct {
 	msgs       <-chan amqp.Delivery
 }
 
-const ACCOUNTS_EXCHANGE_NAME = "acounts-service.events"
+const ACCOUNTS_EXCHANGE_NAME = "accounts-service.events"
+const FRAUD_EXCHANGE_NAME = "fraud-service.events"
 const FRAUD_CHECKS_QUEUE_NAME = "fraud_checks"
 const PAYMENT_STARTED_ROUTING_KEY = "account.payment.started"
 
@@ -35,6 +36,16 @@ func GetClient(connectionString string) *RabbitMQClient {
 	// Redeclare exchange on this side to ensure its setup before binding - prevent startup order problem
 	err = ch.ExchangeDeclare(
 		ACCOUNTS_EXCHANGE_NAME,
+		"topic",
+		true,  // durability
+		false, // delete when unused
+		false, // exclusive
+		false, // no-wait
+		nil,   // args
+	)
+
+	err = ch.ExchangeDeclare(
+		FRAUD_EXCHANGE_NAME,
 		"topic",
 		true,  // durability
 		false, // delete when unused
@@ -96,34 +107,25 @@ func GetClient(connectionString string) *RabbitMQClient {
 	}
 }
 
-// TODO: outbox pattern for Fraud messages
-// func (client *RabbitMQClient) PublishFraudPass(ctx context.Context, routingKey string, body []byte) error {}
-// func (client *RabbitMQClient) PublishFraudFail(ctx context.Context, routingKey string, body []byte) error {}
+func (client *RabbitMQClient) PublishFraudMessage(ctx context.Context, routingKey string, body []byte) error {
+	return client.channel.PublishWithContext(ctx,
+		FRAUD_EXCHANGE_NAME,
+		routingKey, // e.g. "fraud.payment.passed"
+		false,      // Mandatory
+		false,      // Immediate
+		amqp.Publishing{
+			ContentType:  "application/json",
+			DeliveryMode: amqp.Persistent, // write messages to disk
+			Body:         body,
+		},
+	)
+}
 
 type BalanceUpdateMessage struct {
 	AccountTransactionId int64 `json:"account_transaction_id"`
 	SenderAccountId      int64 `json:"sender_account_id"`
 	ReceiverAccountId    int64 `json:"receiver_account_id"`
 	AmountInPennies      int64 `json:"amount_in_pennies"`
-}
-
-func SetupFraudWorker(rabbitClient *RabbitMQClient) {
-	for message := range rabbitClient.msgs {
-		log.Printf("Message recieved: %s", message.RoutingKey)
-
-		var messageBody BalanceUpdateMessage
-		err := json.Unmarshal(message.Body, &messageBody)
-
-		if err != nil {
-			// TODO: setup deadletter queue - dropping message here for simplicity for now
-			log.Printf("Fraud worker failed to handle message: %v", err)
-			message.Nack(false, false)
-			continue
-		}
-
-		log.Printf("Message processed succesfully: %v", messageBody)
-		message.Ack(false)
-	}
 }
 
 func (client *RabbitMQClient) Close() {
