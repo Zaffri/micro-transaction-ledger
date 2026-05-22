@@ -6,10 +6,13 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/Zaffri/micro-transaction-ledger/accounts/internal/jobs"
 	"github.com/Zaffri/micro-transaction-ledger/accounts/internal/rabbitmq"
+	"github.com/Zaffri/micro-transaction-ledger/accounts/internal/repository"
 	"github.com/Zaffri/micro-transaction-ledger/accounts/internal/router"
+	"github.com/Zaffri/micro-transaction-ledger/accounts/internal/service"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -37,10 +40,26 @@ func main() {
 	defer riverManager.RiverClient.Stop(ctx)
 	log.Println("Successfully started River (outbox relay)")
 
-	router := router.GetRoutes(db, riverManager)
+	accountsService := service.AccountsService{
+		Db:            db,
+		Queries:       repository.New(db),
+		OutboxManager: &riverManager,
+	}
 
-	// TODO: set timeouts?
-	err = http.ListenAndServe(getServiceAddress(), router)
+	// TODO: could setup pool of workers - single for now
+	go rabbitmq.SetupPaymentSettleWorker(ctx, rabbitClient, accountsService)
+
+	router := router.GetRoutes(db, riverManager, accountsService)
+
+	srv := &http.Server{
+		Addr:              getServiceAddress(),
+		Handler:           router,
+		ReadHeaderTimeout: 3 * time.Second,
+		WriteTimeout:      10 * time.Second,
+		IdleTimeout:       30 * time.Second,
+	}
+
+	err = srv.ListenAndServe()
 
 	if err != nil {
 		log.Fatalf("Server error: %v", err)

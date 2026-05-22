@@ -7,8 +7,6 @@ package repository
 
 import (
 	"context"
-
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createAccount = `-- name: CreateAccount :one
@@ -121,18 +119,32 @@ func (q *Queries) GetAccountForUpdate(ctx context.Context, id int64) (Account, e
 
 const updateBalance = `-- name: UpdateBalance :exec
 UPDATE accounts
-SET balance_in_pennies = $2,
-  updated_at = $3
+SET balance_in_pennies = $2
 WHERE id = $1
 `
 
 type UpdateBalanceParams struct {
 	ID               int64
 	BalanceInPennies int64
-	UpdatedAt        pgtype.Timestamptz
 }
 
 func (q *Queries) UpdateBalance(ctx context.Context, arg UpdateBalanceParams) error {
-	_, err := q.db.Exec(ctx, updateBalance, arg.ID, arg.BalanceInPennies, arg.UpdatedAt)
+	_, err := q.db.Exec(ctx, updateBalance, arg.ID, arg.BalanceInPennies)
+	return err
+}
+
+const updateTransaction = `-- name: UpdateTransaction :exec
+UPDATE transactions
+SET status = $2
+WHERE id = $1
+`
+
+type UpdateTransactionParams struct {
+	ID     int64
+	Status TransactionStatus
+}
+
+func (q *Queries) UpdateTransaction(ctx context.Context, arg UpdateTransactionParams) error {
+	_, err := q.db.Exec(ctx, updateTransaction, arg.ID, arg.Status)
 	return err
 }

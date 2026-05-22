@@ -15,7 +15,7 @@ type TransactionStatus string
 
 const (
 	TransactionStatusPending  TransactionStatus = "pending"
-	TransactionStatusBooked   TransactionStatus = "booked"
+	TransactionStatusSettled  TransactionStatus = "settled"
 	TransactionStatusRejected TransactionStatus = "rejected"
 )
 

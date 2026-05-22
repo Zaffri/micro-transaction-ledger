@@ -15,6 +15,7 @@ type Querier interface {
 	GetAccount(ctx context.Context, id int64) (Account, error)
 	GetAccountForUpdate(ctx context.Context, id int64) (Account, error)
 	UpdateBalance(ctx context.Context, arg UpdateBalanceParams) error
+	UpdateTransaction(ctx context.Context, arg UpdateTransactionParams) error
 }
 
 var _ Querier = (*Queries)(nil)

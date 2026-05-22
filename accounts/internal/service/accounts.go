@@ -136,8 +136,8 @@ func createTransactionLedgerEntry(
 	queries *repository.Queries,
 	isDebit bool,
 	transactionId int64,
-	senderAccountId int64,
-	receiverAccountId int64,
+	accountId int64,
+	otherParyAccountId int64,
 	amountInPennies int64,
 ) (int64, error) {
 	ledgerAmount := amountInPennies
@@ -148,8 +148,8 @@ func createTransactionLedgerEntry(
 
 	ledgerEntryData := repository.CreateTransactionLedgerEntryParams{
 		TransactionID:       transactionId,
-		AccountID:           senderAccountId,
-		OtherPartyAccountID: receiverAccountId,
+		AccountID:           accountId,
+		OtherPartyAccountID: otherParyAccountId,
 		AmountInPennies:     ledgerAmount,
 	}
 	return queries.CreateTransactionLedgerEntry(ctx, ledgerEntryData)
@@ -175,4 +175,76 @@ func getBalanceUpdateMessage(accountTransactionId, senderAccountId int64, receiv
 	}
 
 	return payload, nil
+}
+
+func updateReiversBalance(ctx context.Context, queries *repository.Queries, accountId int64, amountInPennies int64) error {
+	account, err := queries.GetAccountForUpdate(ctx, accountId)
+
+	if err != nil {
+		return fmt.Errorf("Failed to receive senders balance (ID %d): %v", accountId, err)
+	}
+
+	newBalance := account.BalanceInPennies + amountInPennies
+	log.Printf("Updating account balance (ID %d): %d -> %d", accountId, account.BalanceInPennies, newBalance)
+
+	return queries.UpdateBalance(ctx, repository.UpdateBalanceParams{
+		ID:               accountId,
+		BalanceInPennies: newBalance,
+	})
+}
+
+func (service *AccountsService) SettlePayment(
+	ctx context.Context,
+	accountTransactionId int64,
+	senderAccountId int64,
+	receiverAccountId int64,
+	amountInPennies int64,
+) error {
+	// 1. start txn
+	tx, err := service.Db.Begin(ctx)
+
+	if err != nil {
+		return fmt.Errorf("Failed to start ApplyFraudPass tx: %w", err)
+	}
+
+	defer tx.Rollback(ctx)
+
+	// 2. wrap queries with txn
+	queries := service.Queries.WithTx(tx)
+
+	// 3. write transaction ledger entry for receiver
+	_, err = createTransactionLedgerEntry(
+		ctx,
+		queries,
+		false,
+		accountTransactionId,
+		receiverAccountId,
+		senderAccountId,
+		amountInPennies,
+	)
+
+	if err != nil {
+		return fmt.Errorf("Failed to create ledger entry for receiver: %w", err)
+	}
+
+	// 4. update transaction to settled status
+	err = queries.UpdateTransaction(ctx, repository.UpdateTransactionParams{
+		ID:     accountTransactionId,
+		Status: "settled",
+	})
+
+	if err != nil {
+		return fmt.Errorf("Failed to update transaction status to settled: %w", err)
+	}
+
+	// 5. update receivers account balance
+	err = updateReiversBalance(ctx, queries, receiverAccountId, amountInPennies)
+
+	if err != nil {
+		return fmt.Errorf("Failed to update recievers balance: %w", err)
+	}
+
+	// 6. commit
+	tx.Commit(ctx)
+	return nil
 }

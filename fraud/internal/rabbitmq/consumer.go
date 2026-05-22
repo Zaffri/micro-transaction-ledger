@@ -42,7 +42,7 @@ func SetupFraudWorker(ctx context.Context, rabbitClient *RabbitMQClient, fraudSe
 
 		if err != nil {
 			// TODO: setup deadletter queue - dropping message here for simplicity for now
-			log.Printf("Running fraud checks failed: %v", err)
+			log.Printf("Saving fraud checks failed: %v", err)
 			message.Nack(false, false)
 			continue
 		}
