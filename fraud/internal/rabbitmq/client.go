@@ -44,6 +44,10 @@ func GetClient(connectionString string) *RabbitMQClient {
 		nil,   // args
 	)
 
+	if err != nil {
+		log.Fatalf("Unable to redeclare accounts exchange: %v\n", err)
+	}
+
 	err = ch.ExchangeDeclare(
 		FRAUD_EXCHANGE_NAME,
 		"topic",
@@ -55,10 +59,10 @@ func GetClient(connectionString string) *RabbitMQClient {
 	)
 
 	if err != nil {
-		log.Fatalf("Unable to setup pub/sub exchange: %v\n", err)
+		log.Fatalf("Unable to setup fraud exchange: %v\n", err)
 	}
 
-	queue, err := ch.QueueDeclare(
+	fraudQueue, err := ch.QueueDeclare(
 		FRAUD_CHECKS_QUEUE_NAME,
 		true,  // durability
 		false, // delete once used
@@ -68,7 +72,7 @@ func GetClient(connectionString string) *RabbitMQClient {
 	)
 
 	if err != nil {
-		log.Fatalf("Unable to fraud checks queue: %v\n", err)
+		log.Fatalf("Unable to create fraud checks queue: %v\n", err)
 	}
 
 	// TODO: dig into this...
@@ -79,7 +83,7 @@ func GetClient(connectionString string) *RabbitMQClient {
 	}
 
 	err = ch.QueueBind(
-		queue.Name,
+		fraudQueue.Name,
 		PAYMENT_STARTED_ROUTING_KEY,
 		ACCOUNTS_EXCHANGE_NAME,
 		false, // no-wait
@@ -91,7 +95,7 @@ func GetClient(connectionString string) *RabbitMQClient {
 	}
 
 	msgs, err := ch.Consume(
-		queue.Name,
+		fraudQueue.Name,
 		"fraud_consumer", // consumer
 		false,            // auto-ack - require manual confirmation
 		false,            // exclusive
@@ -99,6 +103,10 @@ func GetClient(connectionString string) *RabbitMQClient {
 		false,            // no-wait
 		nil,              // args
 	)
+
+	if err != nil {
+		log.Fatalf("Unable to setup fraud consumer: %v\n", err)
+	}
 
 	return &RabbitMQClient{
 		connection: conn,

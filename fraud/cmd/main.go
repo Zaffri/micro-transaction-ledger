@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/Zaffri/micro-transaction-ledger/fraud/internal/jobs"
 	"github.com/Zaffri/micro-transaction-ledger/fraud/internal/rabbitmq"
@@ -48,7 +49,15 @@ func main() {
 
 	router := router.GetRoutes(db, nil)
 
-	err = http.ListenAndServe(getServiceAddress(), router)
+	srv := &http.Server{
+		Addr:              getServiceAddress(),
+		Handler:           router,
+		ReadHeaderTimeout: 3 * time.Second,
+		WriteTimeout:      10 * time.Second,
+		IdleTimeout:       30 * time.Second,
+	}
+
+	err = srv.ListenAndServe()
 
 	if err != nil {
 		log.Fatalf("Server error: %v", err)

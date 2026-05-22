@@ -14,14 +14,18 @@ FOR UPDATE;
 
 -- name: UpdateBalance :exec
 UPDATE accounts
-SET balance_in_pennies = $2,
-  updated_at = $3
+SET balance_in_pennies = $2
 WHERE id = $1;
 
 -- name: CreateTransaction :one
 INSERT INTO transactions (description, account_id)
 VALUES ($1, $2)
 RETURNING id, status;
+
+-- name: UpdateTransaction :exec
+UPDATE transactions
+SET status = $2
+WHERE id = $1;
 
 -- name: CreateTransactionLedgerEntry :one
 INSERT INTO transactions_ledger (transaction_id, account_id, other_party_account_id, amount_in_pennies)

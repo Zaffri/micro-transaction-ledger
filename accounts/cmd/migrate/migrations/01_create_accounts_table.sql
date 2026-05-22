@@ -16,7 +16,7 @@ CREATE TRIGGER trigger_update_accounts_timestamp
   EXECUTE PROCEDURE moddatetime(updated_at);
 
 
-CREATE TYPE transaction_status AS ENUM ('pending', 'booked', 'rejected');
+CREATE TYPE transaction_status AS ENUM ('pending', 'settled', 'rejected');
 
 CREATE TABLE IF NOT EXISTS transactions (
   id BIGSERIAL PRIMARY KEY,

@@ -16,6 +16,8 @@ TODO: add screenshot/GIF of UI demo
 
 TODO: add architecture diagram, design choices (high level), techstack, note UI is for demo only
 
+![Diagram of system design diagram](./docs/system-design-diagram.svg)
+
 ## Trade-offs
 
 TODO: explain trade-offs, cap theorem etc
