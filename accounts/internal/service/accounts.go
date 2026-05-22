@@ -38,6 +38,7 @@ const PAYMENT_STARTED_ROUTING_KEY = "account.payment.started"
 func (service *AccountsService) UpdateBalance(ctx context.Context, senderAccountId int64, receiverAccountId int64, amountInPennies int64) error {
 	// TODO: add overdraft logic
 	// TODO: add custom error structs for logging
+	// TODO: cant send money to self and amount needs to be positive
 
 	// early exit - check receiver existence before txn start
 	receiverAccountRow, err := service.Queries.GetAccount(ctx, receiverAccountId)
@@ -58,7 +59,7 @@ func (service *AccountsService) UpdateBalance(ctx context.Context, senderAccount
 
 	queries := service.Queries.WithTx(tx)
 
-	err = updateSendersBalance(ctx, queries, senderAccountId, amountInPennies)
+	err = updateAccountBalance(ctx, queries, senderAccountId, amountInPennies, true, true)
 
 	if err != nil {
 		return err
@@ -98,22 +99,36 @@ func (service *AccountsService) UpdateBalance(ctx context.Context, senderAccount
 	return nil
 }
 
-func updateSendersBalance(ctx context.Context, queries *repository.Queries, senderAccountId int64, amountInPennies int64) error {
-	account, err := queries.GetAccountForUpdate(ctx, senderAccountId)
+func updateAccountBalance(
+	ctx context.Context,
+	queries *repository.Queries,
+	accountId int64,
+	amountInPennies int64,
+	isDebit bool,
+	checkForSufficientFunds bool,
+) error {
+	account, err := queries.GetAccountForUpdate(ctx, accountId)
 
 	if err != nil {
-		return fmt.Errorf("Failed to receive senders balance (ID %d): %v", senderAccountId, err)
+		return fmt.Errorf("Failed to account balance (ID %d): %v", accountId, err)
 	}
 
-	if amountInPennies > account.BalanceInPennies {
-		return fmt.Errorf("Sender doesn't have enough to make payment: %v", err)
+	if checkForSufficientFunds && amountInPennies > account.BalanceInPennies {
+		return fmt.Errorf("Account doesn't have enough to make payment: %v", err)
 	}
 
-	newBalance := account.BalanceInPennies - amountInPennies
-	log.Printf("Updating account balance (ID %d): %d -> %d", senderAccountId, account.BalanceInPennies, newBalance)
+	newBalance := account.BalanceInPennies
+
+	if isDebit {
+		newBalance = account.BalanceInPennies - amountInPennies
+	} else {
+		newBalance = account.BalanceInPennies + amountInPennies
+	}
+
+	log.Printf("Updating account balance (ID %d): %d -> %d", accountId, account.BalanceInPennies, newBalance)
 
 	return queries.UpdateBalance(ctx, repository.UpdateBalanceParams{
-		ID:               senderAccountId,
+		ID:               accountId,
 		BalanceInPennies: newBalance,
 	})
 }
@@ -177,22 +192,6 @@ func getBalanceUpdateMessage(accountTransactionId, senderAccountId int64, receiv
 	return payload, nil
 }
 
-func updateReiversBalance(ctx context.Context, queries *repository.Queries, accountId int64, amountInPennies int64) error {
-	account, err := queries.GetAccountForUpdate(ctx, accountId)
-
-	if err != nil {
-		return fmt.Errorf("Failed to receive senders balance (ID %d): %v", accountId, err)
-	}
-
-	newBalance := account.BalanceInPennies + amountInPennies
-	log.Printf("Updating account balance (ID %d): %d -> %d", accountId, account.BalanceInPennies, newBalance)
-
-	return queries.UpdateBalance(ctx, repository.UpdateBalanceParams{
-		ID:               accountId,
-		BalanceInPennies: newBalance,
-	})
-}
-
 func (service *AccountsService) SettlePayment(
 	ctx context.Context,
 	accountTransactionId int64,
@@ -200,19 +199,16 @@ func (service *AccountsService) SettlePayment(
 	receiverAccountId int64,
 	amountInPennies int64,
 ) error {
-	// 1. start txn
 	tx, err := service.Db.Begin(ctx)
 
 	if err != nil {
-		return fmt.Errorf("Failed to start ApplyFraudPass tx: %w", err)
+		return fmt.Errorf("Failed to start SettlePayment tx: %w", err)
 	}
 
 	defer tx.Rollback(ctx)
 
-	// 2. wrap queries with txn
 	queries := service.Queries.WithTx(tx)
 
-	// 3. write transaction ledger entry for receiver
 	_, err = createTransactionLedgerEntry(
 		ctx,
 		queries,
@@ -227,7 +223,6 @@ func (service *AccountsService) SettlePayment(
 		return fmt.Errorf("Failed to create ledger entry for receiver: %w", err)
 	}
 
-	// 4. update transaction to settled status
 	err = queries.UpdateTransaction(ctx, repository.UpdateTransactionParams{
 		ID:     accountTransactionId,
 		Status: "settled",
@@ -237,8 +232,57 @@ func (service *AccountsService) SettlePayment(
 		return fmt.Errorf("Failed to update transaction status to settled: %w", err)
 	}
 
-	// 5. update receivers account balance
-	err = updateReiversBalance(ctx, queries, receiverAccountId, amountInPennies)
+	err = updateAccountBalance(ctx, queries, receiverAccountId, amountInPennies, false, false)
+
+	if err != nil {
+		return fmt.Errorf("Failed to update recievers balance: %w", err)
+	}
+
+	tx.Commit(ctx)
+	return nil
+}
+
+func (service *AccountsService) RejectFraudPayment(
+	ctx context.Context,
+	accountTransactionId int64,
+	senderAccountId int64,
+	receiverAccountId int64,
+	amountInPennies int64,
+) error {
+	tx, err := service.Db.Begin(ctx)
+
+	if err != nil {
+		return fmt.Errorf("Failed to start RejectFraudPayment tx: %w", err)
+	}
+
+	defer tx.Rollback(ctx)
+
+	queries := service.Queries.WithTx(tx)
+
+	_, err = createTransactionLedgerEntry(
+		ctx,
+		queries,
+		false,
+		accountTransactionId,
+		senderAccountId,
+		receiverAccountId,
+		amountInPennies,
+	)
+
+	if err != nil {
+		return fmt.Errorf("Failed to create ledger entry to return amount back to sender: %w", err)
+	}
+
+	err = queries.UpdateTransaction(ctx, repository.UpdateTransactionParams{
+		ID:     accountTransactionId,
+		Status: "rejected_fraud",
+	})
+
+	if err != nil {
+		return fmt.Errorf("Failed to update transaction status to settled: %w", err)
+	}
+
+	err = updateAccountBalance(ctx, queries, senderAccountId, amountInPennies, false, false)
 
 	if err != nil {
 		return fmt.Errorf("Failed to update recievers balance: %w", err)

@@ -16,7 +16,7 @@ CREATE TRIGGER trigger_update_accounts_timestamp
   EXECUTE PROCEDURE moddatetime(updated_at);
 
 
-CREATE TYPE transaction_status AS ENUM ('pending', 'settled', 'rejected');
+CREATE TYPE transaction_status AS ENUM ('pending', 'settled', 'rejected_fraud');
 
 CREATE TABLE IF NOT EXISTS transactions (
   id BIGSERIAL PRIMARY KEY,
@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS transactions_ledger (
   account_id BIGINT NOT NULL REFERENCES accounts(id) on DELETE RESTRICT,
   other_party_account_id BIGINT NOT NULL REFERENCES accounts(id) on DELETE RESTRICT, -- the other account involved
   amount_in_pennies BIGINT NOT NULL,
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_transactions_ledger_account_id ON transactions_ledger(account_id);
