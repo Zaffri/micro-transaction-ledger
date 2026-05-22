@@ -48,6 +48,7 @@ func main() {
 
 	// TODO: could setup pool of workers - single for now
 	go rabbitmq.SetupPaymentSettleWorker(ctx, rabbitClient, accountsService)
+	go rabbitmq.SetupPaymentFraudWorker(ctx, rabbitClient, accountsService)
 
 	router := router.GetRoutes(db, riverManager, accountsService)
 
