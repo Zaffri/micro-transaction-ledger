@@ -18,7 +18,13 @@ import (
 var schemaSql string
 
 //go:embed seeding/01_create_accounts.sql
-var seedSql string
+var seedAccountSql string
+
+//go:embed seeding/02_create_transaction.sql
+var seedTransactionSql string
+
+//go:embed seeding/03_create_ledger_entry.sql
+var seedLedgerSql string
 
 func main() {
 	ctx := context.Background()
@@ -48,13 +54,7 @@ func run(ctx context.Context, db *pgxpool.Pool) error {
 
 	defer txn.Rollback(ctx)
 
-	_, err = txn.Exec(ctx, seedSql, 1000, "John Doe")
-
-	if err != nil {
-		log.Fatalf("Failed to seed txn: %v", err)
-	}
-
-	_, err = txn.Exec(ctx, seedSql, 5000, "Jane Doe")
+	err = seedData(ctx, txn)
 
 	if err != nil {
 		log.Fatalf("Failed to seed txn: %v", err)
@@ -73,4 +73,68 @@ func run(ctx context.Context, db *pgxpool.Pool) error {
 		log.Fatalf("Failed to run River migrations: %v", err)
 	}
 	return err
+}
+
+func seedData(ctx context.Context, txn pgx.Tx) error {
+	var userOneAccountId int64
+	var userOneBalance int64
+	err := txn.QueryRow(ctx, seedAccountSql, 1000, "John Doe").Scan(&userOneAccountId, &userOneBalance)
+
+	if err != nil {
+		return err
+	}
+
+	var userTwoAccountId int64
+	var userTwoBalance int64
+	err = txn.QueryRow(ctx, seedAccountSql, 5000, "Jane Doe").Scan(&userTwoAccountId, &userTwoBalance)
+
+	if err != nil {
+		return err
+	}
+
+	var transactionOneId int64
+	var transactionOneStatus string
+	err = txn.QueryRow(
+		ctx,
+		seedTransactionSql,
+		"Transfer...test",
+		userOneAccountId,
+		"settled",
+	).Scan(&transactionOneId, &transactionOneStatus)
+
+	if err != nil {
+		return err
+	}
+
+	// entry for account 1
+	var ledgerEntryOneSenderId int64
+	err = txn.QueryRow(
+		ctx,
+		seedLedgerSql,
+		transactionOneId,
+		userOneAccountId,
+		userTwoAccountId,
+		-300,
+	).Scan(&ledgerEntryOneSenderId)
+
+	if err != nil {
+		return err
+	}
+
+	// entry for account 2
+	var ledgerEntryOneReceiverId int64
+	err = txn.QueryRow(
+		ctx,
+		seedLedgerSql,
+		transactionOneId,
+		userTwoAccountId,
+		userOneAccountId,
+		300,
+	).Scan(&ledgerEntryOneReceiverId)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

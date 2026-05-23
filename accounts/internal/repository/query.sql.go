@@ -7,6 +7,8 @@ package repository
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createAccount = `-- name: CreateAccount :one
@@ -115,6 +117,56 @@ func (q *Queries) GetAccountForUpdate(ctx context.Context, id int64) (Account, e
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const getTransactionLedgerEntries = `-- name: GetTransactionLedgerEntries :many
+SELECT ledger.id, ledger.transaction_id, ledger.account_id, ledger.other_party_account_id, ledger.amount_in_pennies, ledger.created_at, 
+  other_party.account_holder_name AS other_party_name,
+  txn.status
+FROM transactions_ledger ledger
+INNER JOIN accounts other_party ON ledger.other_party_account_id = other_party.id
+INNER JOIN transactions txn ON ledger.transaction_id = txn.id
+WHERE ledger.account_id = $1
+`
+
+type GetTransactionLedgerEntriesRow struct {
+	ID                  int64
+	TransactionID       int64
+	AccountID           int64
+	OtherPartyAccountID int64
+	AmountInPennies     int64
+	CreatedAt           pgtype.Timestamptz
+	OtherPartyName      string
+	Status              TransactionStatus
+}
+
+func (q *Queries) GetTransactionLedgerEntries(ctx context.Context, accountID int64) ([]GetTransactionLedgerEntriesRow, error) {
+	rows, err := q.db.Query(ctx, getTransactionLedgerEntries, accountID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetTransactionLedgerEntriesRow
+	for rows.Next() {
+		var i GetTransactionLedgerEntriesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.TransactionID,
+			&i.AccountID,
+			&i.OtherPartyAccountID,
+			&i.AmountInPennies,
+			&i.CreatedAt,
+			&i.OtherPartyName,
+			&i.Status,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const updateBalance = `-- name: UpdateBalance :exec

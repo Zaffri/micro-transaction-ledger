@@ -1,37 +1,64 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, Suspense } from 'vue';
 import AccountTransaction from './AccountTransaction.vue';
+import type { Account } from '@/App.vue';
 
 interface Props {
-  accountName: string
-  balance: number
+  isLoading: boolean;
+  account: Account
 };
 
 const props = defineProps<Props>();
 
 const accountTitle = computed<string>(() => {
-  if (!props.accountName) return '';
-  return `${props.accountName}'s Account`
+  if (!props.account) return '';
+  return `${props.account.AccountHolderName}'s Account`
 })
+
+const balance = computed<number | string>(() => {
+  if (!props.account) return '--';
+  // TODO: formatting...
+  return props.account.BalanceInPennies;
+});
 
 </script>
 
 <template>
   <section class="flex flex-col flex-1 overflow-y-auto bg-white rounded-2xl border border-slate-200/80 shadow-xs p-6 custom-scrollbar">
-    <div>
-      <div class="flex w-full items-baseline justify-between border-b border-slate-100 pb-3">
-        <h2 class="text-2xl font-bold text-slate-900 mb-4">{{ accountTitle }}</h2>
+      <div v-if="!props.isLoading">
+        <div class="flex w-full items-baseline justify-between border-b border-slate-100 pb-3">
+          <h2 class="text-2xl font-bold text-slate-900 mb-4">{{ accountTitle }}</h2>
 
-        <span class="text-lg font-bold text-slate-600">
-          Balance: £{{ props.balance }}
-        </span>
+          <span class="text-lg font-bold text-slate-600">
+            Balance: {{ balance }}
+          </span>
+        </div>
+
+        <!-- <AccountTransaction 
+          v-for="transaction in account.Statement"
+          :type="transaction.AmountInPennies < 0 ? 'debit' : 'credit'"
+          :amount="transaction.AmountInPennies"
+          :status="transaction.Status"
+          :date="new Date(transaction.CreatedAt)"
+        /> -->
+        <AccountTransaction 
+          v-for="transaction in account.Statement"
+          :statement="transaction"
+        />
       </div>
 
-      <AccountTransaction type="credit" :amount="10", status="pending" :date="new Date('2026-05-22')" />
-      <AccountTransaction type="credit" :amount="1000", status="settled" :date="new Date('2026-05-22')" />
-      <AccountTransaction type="debit" :amount="150", status="rejected_fraud" :date="new Date('2026-05-22')" />
-      <AccountTransaction type="debit" :amount="50", status="settled" :date="new Date('2026-05-22')" />
-    </div>
+      <div v-else>
+        <div class="flex w-full items-baseline justify-between border-b border-slate-100 pb-3">
+          <h2 class="text-2xl font-bold text-slate-700 mb-4">Loading...</h2>
+  
+          <span class="text-lg font-bold text-slate-500">
+            Loading...
+          </span>
+        </div>
+
+        <div class="text-slate-500 pt-5">Loading...</div>
+      </div>
+
   </section>
 </template>
 

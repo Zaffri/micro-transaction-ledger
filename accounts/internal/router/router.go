@@ -15,6 +15,7 @@ func GetRoutes(db *pgxpool.Pool, riverManager jobs.RiverManager, accountsService
 
 	router.GET("/accounts/health", handlers.HealthHandler)
 	router.GET("/accounts/:id", accountsHandler.GetAccount)
+	router.GET("/accounts/:id/statement", accountsHandler.GetAccountStatement)
 	router.POST("/accounts/payment", accountsHandler.PaymentHandler)
 
 	return router

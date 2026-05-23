@@ -1,15 +1,40 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import TransactionStatusLabel from './TransactionStatusLabel.vue';
+import type { StatementLine } from '@/App.vue';
 
 
 interface Props {
-  type: 'credit' | 'debit',
-  amount: number,
-  status: 'pending' | 'settled' | 'rejected_fraud',
-  date: Date
+  statement: StatementLine
 }
 
 const props = defineProps<Props>()
+
+const transactionType = computed(() => {
+  return props.statement.AmountInPennies < 0 ? 'debit' : 'credit';
+}); 
+
+const description = computed(() => {
+  const otherParty = props.statement.OtherPartyName
+  
+  if (transactionType.value === 'credit') {
+    return `Transfer from ${otherParty}`
+  }
+  return `Transfer to ${otherParty}` 
+});
+
+const amount = computed(() => {
+  const rawAmount = props.statement.AmountInPennies;
+  if (!rawAmount) return 0;
+
+  const formatter = new Intl.NumberFormat('en-GB', {
+    style: 'currency',
+    currency: 'GBP',
+  });
+
+  const pounds = rawAmount / 100;
+  return formatter.format(pounds);
+});
 
 </script>
 
@@ -20,14 +45,14 @@ const props = defineProps<Props>()
     <div class="flex flex-1 items-center gap-4 min-w-0">
     
       <div class="shrink-0 text-xs font-semibold tracking-wide text-slate-400 w-25">
-        {{ props.date.toDateString() }}
+        {{ new Date(props.statement.CreatedAt).toDateString() }}
       </div>
 
       <div class="flex flex-wrap items-center gap-2 min-w-0">
-        <TransactionStatusLabel :status="props.status" />
+        <TransactionStatusLabel :status="props.statement.Status" />
 
         <span class="text-sm font-medium text-slate-600 truncate max-w-[200px] sm:max-w-xs">
-          Transfer from X
+          {{ description }}
         </span>
       </div>
 
@@ -38,21 +63,21 @@ const props = defineProps<Props>()
         <span 
           :class="[
             'inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-bold tracking-wide uppercase shadow-xs',
-            props.type === 'credit' 
+            transactionType === 'credit' 
               ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60' 
               : 'bg-rose-50 text-rose-700 border border-rose-200/60'
           ]"
         >
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="h-3.5 w-3.5">
-            <path v-if="props.type === 'credit'" fill-rule="evenodd" d="M8 12.5a.75.75 0 0 1-.75-.75V5.56L4.78 8.03a.75.75 0 0 1-1.06-1.06l3.75-3.75a.75.75 0 0 1 1.06 0l3.75 3.75a.75.75 0 1 1-1.06 1.06L8.75 5.56V11.75a.75.75 0 0 1-.75.75Z" clip-rule="evenodd" />
+            <path v-if="transactionType === 'credit'" fill-rule="evenodd" d="M8 12.5a.75.75 0 0 1-.75-.75V5.56L4.78 8.03a.75.75 0 0 1-1.06-1.06l3.75-3.75a.75.75 0 0 1 1.06 0l3.75 3.75a.75.75 0 1 1-1.06 1.06L8.75 5.56V11.75a.75.75 0 0 1-.75.75Z" clip-rule="evenodd" />
             <path v-else fill-rule="evenodd" d="M8 3.5a.75.75 0 0 1 .75.75v6.19l2.47-2.47a.75.75 0 1 1 1.06 1.06l-3.75 3.75a.75.75 0 0 1-1.06 0l-3.75-3.75a.75.75 0 1 1 1.06-1.06l2.47 2.47V4.25A.75.75 0 0 1 8 3.5Z" clip-rule="evenodd" />
           </svg>
-          {{ props.type === 'credit' ? 'in' : 'out' }}
+          {{ transactionType === 'credit' ? 'in' : 'out' }}
         </span>
       </div>
 
       <span class="text-slate-600">
-        {{ props.type === 'credit' ? '+' : '-' }}£{{props.amount}}
+        {{ transactionType === 'credit' ? '+' : '' }}{{amount}}
       </span>
     </div>
 
