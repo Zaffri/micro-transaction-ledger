@@ -27,7 +27,7 @@ func (handler *AccountHandler) PaymentHandler(ctx *gin.Context) {
 
 	// Note: no auth/ownership checks for simplicity - obviously wouldn't do this in real project
 
-	err = handler.AccountsService.UpdateBalance(
+	err = handler.AccountsService.StartPayment(
 		ctx,
 		paymentRequest.SenderAccountId,
 		paymentRequest.ReceiverAccountId,

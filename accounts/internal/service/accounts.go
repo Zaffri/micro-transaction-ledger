@@ -35,7 +35,7 @@ type PaymentRequest struct {
 
 const PAYMENT_STARTED_ROUTING_KEY = "account.payment.started"
 
-func (service *AccountsService) UpdateBalance(ctx context.Context, senderAccountId int64, receiverAccountId int64, amountInPennies int64) error {
+func (service *AccountsService) StartPayment(ctx context.Context, senderAccountId int64, receiverAccountId int64, amountInPennies int64) error {
 	// TODO: add overdraft logic
 	// TODO: add custom error structs for logging
 	// TODO: cant send money to self and amount needs to be positive
