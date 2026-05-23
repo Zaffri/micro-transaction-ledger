@@ -14,6 +14,7 @@ type Querier interface {
 	CreateTransactionLedgerEntry(ctx context.Context, arg CreateTransactionLedgerEntryParams) (int64, error)
 	GetAccount(ctx context.Context, id int64) (Account, error)
 	GetAccountForUpdate(ctx context.Context, id int64) (Account, error)
+	GetTransactionLedgerEntries(ctx context.Context, accountID int64) ([]GetTransactionLedgerEntriesRow, error)
 	UpdateBalance(ctx context.Context, arg UpdateBalanceParams) error
 	UpdateTransaction(ctx context.Context, arg UpdateTransactionParams) error
 }

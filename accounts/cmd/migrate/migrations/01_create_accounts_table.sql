@@ -15,6 +15,7 @@ CREATE TRIGGER trigger_update_accounts_timestamp
   FOR EACH ROW
   EXECUTE PROCEDURE moddatetime(updated_at);
 
+-- DROP TYPE IF EXISTS transaction_status CASCADE; -- for dev only, can delete data
 
 CREATE TYPE transaction_status AS ENUM ('pending', 'settled', 'rejected_fraud');
 
@@ -34,7 +35,7 @@ CREATE TRIGGER trigger_update_transactions_timestamp
   FOR EACH ROW
   EXECUTE PROCEDURE moddatetime(updated_at);
 
-CREATE INDEX idx_transactions_account_id ON transactions(account_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_account_id ON transactions(account_id);
 
 CREATE TABLE IF NOT EXISTS transactions_ledger (
   id BIGSERIAL PRIMARY KEY,
@@ -45,4 +46,4 @@ CREATE TABLE IF NOT EXISTS transactions_ledger (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_transactions_ledger_account_id ON transactions_ledger(account_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_ledger_account_id ON transactions_ledger(account_id);

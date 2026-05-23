@@ -14,8 +14,6 @@ services:
     build:
       context: ./web-ui
     container_name: web-ui
-    ports:
-      - "5173:5173"
     volumes:
       - ./web-ui:/app
       - /app/node_modules # anonymous volume - prevent host node_modules from overwriting container node_modules

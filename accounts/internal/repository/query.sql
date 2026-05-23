@@ -32,3 +32,11 @@ INSERT INTO transactions_ledger (transaction_id, account_id, other_party_account
 VALUES ($1, $2, $3, $4)
 RETURNING id;
 
+-- name: GetTransactionLedgerEntries :many
+SELECT ledger.*, 
+  other_party.account_holder_name AS other_party_name,
+  txn.status
+FROM transactions_ledger ledger
+INNER JOIN accounts other_party ON ledger.other_party_account_id = other_party.id
+INNER JOIN transactions txn ON ledger.transaction_id = txn.id
+WHERE ledger.account_id = $1;

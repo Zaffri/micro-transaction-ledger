@@ -14,9 +14,9 @@ import (
 type TransactionStatus string
 
 const (
-	TransactionStatusPending  TransactionStatus = "pending"
-	TransactionStatusSettled  TransactionStatus = "settled"
-	TransactionStatusRejected TransactionStatus = "rejected"
+	TransactionStatusPending       TransactionStatus = "pending"
+	TransactionStatusSettled       TransactionStatus = "settled"
+	TransactionStatusRejectedFraud TransactionStatus = "rejected_fraud"
 )
 
 func (e *TransactionStatus) Scan(src interface{}) error {
@@ -77,5 +77,5 @@ type TransactionsLedger struct {
 	AccountID           int64
 	OtherPartyAccountID int64
 	AmountInPennies     int64
-	UpdatedAt           pgtype.Timestamptz
+	CreatedAt           pgtype.Timestamptz
 }
