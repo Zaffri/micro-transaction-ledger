@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, Suspense } from 'vue';
 import AccountTransaction from './AccountTransaction.vue';
-import type { Account } from '@/App.vue';
+import type { Account } from '@/data/api';
 
 interface Props {
   isLoading: boolean;
@@ -34,13 +34,6 @@ const balance = computed<number | string>(() => {
           </span>
         </div>
 
-        <!-- <AccountTransaction 
-          v-for="transaction in account.Statement"
-          :type="transaction.AmountInPennies < 0 ? 'debit' : 'credit'"
-          :amount="transaction.AmountInPennies"
-          :status="transaction.Status"
-          :date="new Date(transaction.CreatedAt)"
-        /> -->
         <AccountTransaction 
           v-for="transaction in account.Statement"
           :statement="transaction"

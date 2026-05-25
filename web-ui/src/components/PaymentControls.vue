@@ -1,4 +1,13 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+
+interface Props {
+  makePayment: (sender: number, amount: number) => void
+}
+
+const props = defineProps<Props>();
+const senderId = defineModel<number>('senderId', { default: -1 });
+const amount = defineModel<number>('amount', { default: 0 });
+</script>
 
 <template>
   <div class="px-4 pt-4 bg-slate-100/60 shrink-0">
@@ -6,8 +15,8 @@
 
       <div class="flex flex-1 flex-wrap items-center gap-3 min-w-[280px]">
         <div class="relative w-full sm:w-65">
-          <select class="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm font-medium text-slate-700 outline-none transition-all hover:bg-slate-100/70 focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-500/10">
-            <option value="">Select transer direction</option>
+          <select v-model.number="senderId" class="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm font-medium text-slate-700 outline-none transition-all hover:bg-slate-100/70 focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-500/10">
+            <option value="-1">Select transer direction</option>
             <option value="1">From John's to Jane's account</option>
             <option value="2">From Jane's to John's account</option>
           </select>
@@ -24,7 +33,8 @@
             <span class="text-sm font-medium text-slate-400">£</span>
           </div>
 
-          <input 
+          <input
+            v-model="amount"
             type="number" 
             placeholder="0.00" 
             step="0.01"
@@ -36,7 +46,7 @@
           </div>
         </div>
 
-        <button class="inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-blue-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-900 shadow-xs">
+        <button @click="makePayment(senderId, amount)" class="inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-blue-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-900 shadow-xs">
           <span>Send</span>
         </button>
       </div>

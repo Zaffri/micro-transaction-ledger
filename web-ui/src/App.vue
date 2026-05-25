@@ -3,80 +3,74 @@ import { onMounted, ref } from 'vue';
 import AccountPane from './components/AccountPane.vue';
 import PaymentControls from './components/PaymentControls.vue';
 import Topbar from './components/Topbar.vue';
+import { getAccounts, makePayment, type Account, type StatementLine } from './data/api';
 
 const isLoading = ref(true);
 const accounts = ref<Account[]>([]);
+const polling = ref<boolean>(false);
+const pollingTimer = ref<number | undefined>();
 const errorMessage = ref('')
 
-const API_GATEWAY = 'http://localhost:8080'
-const ACCOUNTS_ENDPOINT = '/accounts'
+const getData = async () => {
+  const results = await getAccounts();
 
-export interface StatementLine {
-  Status: 'settled' | 'rejected_fraud' | 'pending';
-  AmountInPennies: number;
-  OtherPartyName: string;
-  CreatedAt: string;
-}
-
-export interface Account {
-  ID: number;
-  BalanceInPennies: number;
-  AccountHolderName: string;
-  CreatedAt: string;
-  UpdatedAt: string;
-  Statement: StatementLine[];
-}
-
-const getAccounts = async (): Promise<{ data: Account[] } | { error: string }> => {
-  try {
-    const accountRequests = [
-      fetch(`${API_GATEWAY}${ACCOUNTS_ENDPOINT}/1`).then(res => res.json() as Promise<Account>),
-      fetch(`${API_GATEWAY}${ACCOUNTS_ENDPOINT}/2`).then(res => res.json() as Promise<Account>),
-    ];
-
-    const statementRequests = [
-      fetch(`${API_GATEWAY}${ACCOUNTS_ENDPOINT}/1/statement`).then(res => res.json() as Promise<StatementLine[]>),
-      fetch(`${API_GATEWAY}${ACCOUNTS_ENDPOINT}/2/statement`).then(res => res.json() as Promise<StatementLine[]>),
-    ];
-  
-    const [accountOne, accountTwo] = await Promise.all(accountRequests);
-    const [accountOneStatement, accountTwoStatement] = await Promise.all(statementRequests);
-    
-    const preparedData: Account[] = [];
-
-    if (accountOne && accountOneStatement) {
-      accountOne.Statement = accountOneStatement
-      preparedData[0] = accountOne;
-    }
-
-    if (accountTwo && accountTwoStatement) {
-      accountTwo.Statement = accountTwoStatement
-      preparedData[1] = accountTwo;
-    }
-
-    return { data: preparedData };
-  } catch (err) {
-    console.log(err);
-    return { error: 'Failed to fetch account data' };
+  if ('error' in results) {
+    // TODO: SET AND SHOW ERROR - errorMessage
+    console.log(results);
+    return;
   }
+
+  accounts.value = results.data;
+  isLoading.value = false;
+};
+
+const startPolling = () => {
+  if (polling.value) return;
+  polling.value = true;
+
+  pollingTimer.value = setInterval(() => {
+    getData();
+  }, 10000);
+};
+
+const stopPolling = () => {
+  if (!polling.value) return;
+  polling.value = false;
+
+  clearInterval(pollingTimer.value)
+  pollingTimer.value = undefined;
+};
+
+const handlePayment = async (senderId: number, amount: number) => {
+  const positionInAccounts = accounts.value.findIndex(account => account.ID === senderId);
+  if (positionInAccounts === -1) return;
+
+  stopPolling();
+
+  const result = await makePayment(senderId, amount);
+  const otherPartyIndex = positionInAccounts === 1 ? 2 : 1;
+  const otherPartyName = (accounts.value[otherPartyIndex]) ? accounts.value[otherPartyIndex].AccountHolderName : '';
+
+  // TODO: handle error
+
+  if (accounts.value[positionInAccounts]) {
+    const optimisticUpdate: StatementLine = {
+      Status: 'pending',
+      AmountInPennies: amount,
+      OtherPartyName: otherPartyName,
+      CreatedAt: new Date().toDateString()
+    }
+
+    accounts.value[positionInAccounts].Statement.unshift(optimisticUpdate)
+  }
+
+  console.log(result);
+  startPolling();
 };
 
 onMounted(() => {
-  getAccounts()
-    .then((results) => {
-      if ('error' in results) {
-        // TODO: SET AND SHOW ERROR - errorMessage
-        console.log(results);
-        return;
-      }
-
-      accounts.value = results.data;
-      isLoading.value = false;
-      console.log("Setting loading false", isLoading.value);
-    })
-    .catch(() => {
-      // TODO: set error and stuff
-    });
+  getData();
+  startPolling();
 });
 
 </script>
@@ -85,10 +79,9 @@ onMounted(() => {
   <div class="flex h-screen w-screen flex-col bg-slate-50 font-sans text-slate-700 antialiased overflow-hidden">
     <Topbar />
 
-    <PaymentControls />
+    <PaymentControls :make-payment="handlePayment" />
 
     <main class="flex min-h-0 flex-1 px-4 pb-4 pt-3 gap-4 bg-slate-100/60">
-      <!-- <AccountPane :is-loading="isLoading" :account-name="accounts[1]?.AccountHolderName" :balance="1000" /> -->
       <AccountPane v-for="account in accounts" :is-loading="isLoading" :account="account" />
     </main>
   </div>
