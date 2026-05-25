@@ -42,8 +42,11 @@ CREATE TABLE IF NOT EXISTS transactions_ledger (
   transaction_id BIGINT NOT NULL REFERENCES transactions(id) on DELETE RESTRICT,
   account_id BIGINT NOT NULL REFERENCES accounts(id) on DELETE RESTRICT,
   other_party_account_id BIGINT NOT NULL REFERENCES accounts(id) on DELETE RESTRICT, -- the other account involved
+  idempotency_key UUID NOT NULL,
+  is_compensating_txn BOOLEAN NOT NULL,
   amount_in_pennies BIGINT NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT transactions_ledger_idempotency_key_check UNIQUE (idempotency_key, account_id, is_compensating_txn)
 );
 
 CREATE INDEX IF NOT EXISTS idx_transactions_ledger_account_id ON transactions_ledger(account_id);

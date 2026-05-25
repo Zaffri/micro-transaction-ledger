@@ -7,6 +7,7 @@ import (
 
 	"github.com/Zaffri/micro-transaction-ledger/fraud/internal/repository"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -34,6 +35,7 @@ type FraudResult struct {
 }
 
 type FraudCheck struct {
+	IdempotencyKey       pgtype.UUID
 	AccountTransactionId int64
 	SenderAccountId      int64
 	ReceiverAccountId    int64
@@ -104,15 +106,17 @@ func (service *FraudService) SaveFraudResult(
 }
 
 type FraudResultMessage struct {
-	FraudPass            bool  `json:"fraud_pass"`
-	AccountTransactionId int64 `json:"account_transaction_id"`
-	SenderAccountId      int64 `json:"sender_account_id"`
-	ReceiverAccountId    int64 `json:"receiver_account_id"`
-	AmountInPennies      int64 `json:"amount_in_pennies"`
+	IdempotencyKey       pgtype.UUID `json:"idempotency_key"`
+	FraudPass            bool        `json:"fraud_pass"`
+	AccountTransactionId int64       `json:"account_transaction_id"`
+	SenderAccountId      int64       `json:"sender_account_id"`
+	ReceiverAccountId    int64       `json:"receiver_account_id"`
+	AmountInPennies      int64       `json:"amount_in_pennies"`
 }
 
 func getFraudMessage(fraudCheck FraudCheck) ([]byte, error) {
 	payload, err := json.Marshal(FraudResultMessage{
+		IdempotencyKey:       fraudCheck.IdempotencyKey,
 		FraudPass:            fraudCheck.Result.Pass,
 		AccountTransactionId: fraudCheck.AccountTransactionId,
 		SenderAccountId:      fraudCheck.SenderAccountId,

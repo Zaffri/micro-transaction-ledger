@@ -9,6 +9,7 @@ const isLoading = ref(true);
 const accounts = ref<Account[]>([]);
 const polling = ref<boolean>(false);
 const pollingTimer = ref<number | undefined>();
+const idempotencyKey = ref<string>(crypto.randomUUID());
 const errorMessage = ref('')
 
 const getData = async () => {
@@ -41,13 +42,15 @@ const stopPolling = () => {
   pollingTimer.value = undefined;
 };
 
+const resetIdempotencyKey = () => idempotencyKey.value = crypto.randomUUID();
+
 const handlePayment = async (senderId: number, amount: number) => {
   const positionInAccounts = accounts.value.findIndex(account => account.ID === senderId);
   if (positionInAccounts === -1) return;
 
   stopPolling();
 
-  const result = await makePayment(senderId, amount);
+  const result = await makePayment(idempotencyKey.value, senderId, amount);
   const otherPartyIndex = positionInAccounts === 1 ? 2 : 1;
   const otherPartyName = (accounts.value[otherPartyIndex]) ? accounts.value[otherPartyIndex].AccountHolderName : '';
 
@@ -80,7 +83,7 @@ onMounted(() => {
   <div class="flex h-screen w-screen flex-col bg-slate-50 font-sans text-slate-700 antialiased overflow-hidden">
     <Topbar />
 
-    <PaymentControls :make-payment="handlePayment" />
+    <PaymentControls :make-payment="handlePayment" :reset-idempotency-key="resetIdempotencyKey" />
 
     <main class="flex min-h-0 flex-1 px-4 pb-4 pt-3 gap-4 bg-slate-100/60">
       <AccountPane v-for="account in accounts" :key="account.ID" :is-loading="isLoading" :account="account" />

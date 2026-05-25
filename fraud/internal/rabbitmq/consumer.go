@@ -23,6 +23,7 @@ func SetupFraudWorker(ctx context.Context, rabbitClient *RabbitMQClient, fraudSe
 		}
 
 		fraudCheck := service.FraudCheck{
+			IdempotencyKey:       messageBody.IdempotencyKey,
 			AccountTransactionId: messageBody.AccountTransactionId,
 			SenderAccountId:      messageBody.SenderAccountId,
 			ReceiverAccountId:    messageBody.ReceiverAccountId,

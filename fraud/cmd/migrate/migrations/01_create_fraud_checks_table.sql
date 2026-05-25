@@ -5,7 +5,8 @@ CREATE TABLE IF NOT EXISTS fraud_checks (
   transaction_id BIGINT NOT NULL,
   risk_score smallint NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+  updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  CONSTRAINT fraud_checks_transaction_id UNIQUE (transaction_id)
 );
 
 DROP TRIGGER IF EXISTS trigger_update_fraud_checks_timestamp ON fraud_checks;

@@ -58,12 +58,14 @@ func (q *Queries) CreateTransaction(ctx context.Context, arg CreateTransactionPa
 }
 
 const createTransactionLedgerEntry = `-- name: CreateTransactionLedgerEntry :one
-INSERT INTO transactions_ledger (transaction_id, account_id, other_party_account_id, amount_in_pennies)
-VALUES ($1, $2, $3, $4)
+INSERT INTO transactions_ledger (idempotency_key, is_compensating_txn, transaction_id, account_id, other_party_account_id, amount_in_pennies)
+VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING id
 `
 
 type CreateTransactionLedgerEntryParams struct {
+	IdempotencyKey      pgtype.UUID
+	IsCompensatingTxn   bool
 	TransactionID       int64
 	AccountID           int64
 	OtherPartyAccountID int64
@@ -72,11 +74,31 @@ type CreateTransactionLedgerEntryParams struct {
 
 func (q *Queries) CreateTransactionLedgerEntry(ctx context.Context, arg CreateTransactionLedgerEntryParams) (int64, error) {
 	row := q.db.QueryRow(ctx, createTransactionLedgerEntry,
+		arg.IdempotencyKey,
+		arg.IsCompensatingTxn,
 		arg.TransactionID,
 		arg.AccountID,
 		arg.OtherPartyAccountID,
 		arg.AmountInPennies,
 	)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
+const duplicatePaymentCheck = `-- name: DuplicatePaymentCheck :one
+SELECT id FROM transactions_ledger
+WHERE account_id = $1 AND idempotency_key = $2
+FOR UPDATE
+`
+
+type DuplicatePaymentCheckParams struct {
+	AccountID      int64
+	IdempotencyKey pgtype.UUID
+}
+
+func (q *Queries) DuplicatePaymentCheck(ctx context.Context, arg DuplicatePaymentCheckParams) (int64, error) {
+	row := q.db.QueryRow(ctx, duplicatePaymentCheck, arg.AccountID, arg.IdempotencyKey)
 	var id int64
 	err := row.Scan(&id)
 	return id, err
@@ -120,7 +142,7 @@ func (q *Queries) GetAccountForUpdate(ctx context.Context, id int64) (Account, e
 }
 
 const getTransactionLedgerEntries = `-- name: GetTransactionLedgerEntries :many
-SELECT ledger.id, ledger.transaction_id, ledger.account_id, ledger.other_party_account_id, ledger.amount_in_pennies, ledger.created_at, 
+SELECT ledger.id, ledger.transaction_id, ledger.account_id, ledger.other_party_account_id, ledger.idempotency_key, ledger.is_compensating_txn, ledger.amount_in_pennies, ledger.created_at, 
   other_party.account_holder_name AS other_party_name,
   txn.status
 FROM transactions_ledger ledger
@@ -134,6 +156,8 @@ type GetTransactionLedgerEntriesRow struct {
 	TransactionID       int64
 	AccountID           int64
 	OtherPartyAccountID int64
+	IdempotencyKey      pgtype.UUID
+	IsCompensatingTxn   bool
 	AmountInPennies     int64
 	CreatedAt           pgtype.Timestamptz
 	OtherPartyName      string
@@ -154,6 +178,8 @@ func (q *Queries) GetTransactionLedgerEntries(ctx context.Context, accountID int
 			&i.TransactionID,
 			&i.AccountID,
 			&i.OtherPartyAccountID,
+			&i.IdempotencyKey,
+			&i.IsCompensatingTxn,
 			&i.AmountInPennies,
 			&i.CreatedAt,
 			&i.OtherPartyName,

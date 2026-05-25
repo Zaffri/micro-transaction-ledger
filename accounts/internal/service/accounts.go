@@ -8,7 +8,10 @@ import (
 	"log"
 
 	"github.com/Zaffri/micro-transaction-ledger/accounts/internal/repository"
+	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -35,7 +38,7 @@ type PaymentRequest struct {
 
 const PAYMENT_STARTED_ROUTING_KEY = "account.payment.started"
 
-func (service *AccountsService) StartPayment(ctx context.Context, senderAccountId int64, receiverAccountId int64, amountInPennies int64) error {
+func (service *AccountsService) StartPayment(ctx context.Context, idempotencyKey pgtype.UUID, senderAccountId int64, receiverAccountId int64, amountInPennies int64) error {
 	// TODO: add overdraft logic
 	// TODO: add custom error structs for logging
 	// TODO: cant send money to self and amount needs to be positive
@@ -59,6 +62,22 @@ func (service *AccountsService) StartPayment(ctx context.Context, senderAccountI
 
 	queries := service.Queries.WithTx(tx)
 
+	// idempotency check
+	_, err = queries.DuplicatePaymentCheck(ctx, repository.DuplicatePaymentCheckParams{
+		AccountID:      senderAccountId,
+		IdempotencyKey: idempotencyKey,
+	})
+
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		log.Printf("Unable to run duplicate payment check: %v", err)
+		return err
+	}
+
+	if err == nil {
+		log.Printf("Payment for this idempotency key exists: %d, %s, %v", senderAccountId, idempotencyKey, err)
+		return errors.New("Payment for this idempotency key exists")
+	}
+
 	err = updateAccountBalance(ctx, queries, senderAccountId, amountInPennies, true, true)
 
 	if err != nil {
@@ -72,13 +91,29 @@ func (service *AccountsService) StartPayment(ctx context.Context, senderAccountI
 		return err
 	}
 
-	_, err = createTransactionLedgerEntry(ctx, queries, true, transactionRow.ID, senderAccountId, receiverAccountId, amountInPennies)
+	_, err = createTransactionLedgerEntry(
+		ctx,
+		queries,
+		idempotencyKey,
+		false,
+		true,
+		transactionRow.ID,
+		senderAccountId,
+		receiverAccountId,
+		amountInPennies,
+	)
 
 	if err != nil {
 		return err
 	}
 
-	messagePayload, err := getBalanceUpdateMessage(transactionRow.ID, senderAccountId, receiverAccountId, amountInPennies)
+	messagePayload, err := getBalanceUpdateMessage(
+		idempotencyKey,
+		transactionRow.ID,
+		senderAccountId,
+		receiverAccountId,
+		amountInPennies,
+	)
 
 	if err != nil {
 		return fmt.Errorf("Failed to prepare balance update message for outbox table: %v", err)
@@ -149,6 +184,8 @@ func createAccountTransaction(
 func createTransactionLedgerEntry(
 	ctx context.Context,
 	queries *repository.Queries,
+	indempotencyKey pgtype.UUID,
+	isCompensatingTxn bool,
 	isDebit bool,
 	transactionId int64,
 	accountId int64,
@@ -162,6 +199,8 @@ func createTransactionLedgerEntry(
 	}
 
 	ledgerEntryData := repository.CreateTransactionLedgerEntryParams{
+		IdempotencyKey:      indempotencyKey,
+		IsCompensatingTxn:   isCompensatingTxn,
 		TransactionID:       transactionId,
 		AccountID:           accountId,
 		OtherPartyAccountID: otherParyAccountId,
@@ -171,15 +210,17 @@ func createTransactionLedgerEntry(
 }
 
 type BalanceUpdateMessage struct {
-	AccountTransactionId int64 `json:"account_transaction_id"`
-	SenderAccountId      int64 `json:"sender_account_id"`
-	ReceiverAccountId    int64 `json:"receiver_account_id"`
-	AmountInPennies      int64 `json:"amount_in_pennies"`
+	IdempotencyKey       pgtype.UUID `json:"idempotency_key"`
+	AccountTransactionId int64       `json:"account_transaction_id"`
+	SenderAccountId      int64       `json:"sender_account_id"`
+	ReceiverAccountId    int64       `json:"receiver_account_id"`
+	AmountInPennies      int64       `json:"amount_in_pennies"`
 }
 
-func getBalanceUpdateMessage(accountTransactionId, senderAccountId int64, receiverAccountId int64, amountInPennies int64) ([]byte, error) {
+func getBalanceUpdateMessage(idempotencyKey pgtype.UUID, accountTransactionId, senderAccountId int64, receiverAccountId int64, amountInPennies int64) ([]byte, error) {
 	payload, err := json.Marshal(BalanceUpdateMessage{
 		AccountTransactionId: accountTransactionId,
+		IdempotencyKey:       idempotencyKey,
 		SenderAccountId:      senderAccountId,
 		ReceiverAccountId:    receiverAccountId,
 		AmountInPennies:      amountInPennies,
@@ -194,6 +235,7 @@ func getBalanceUpdateMessage(accountTransactionId, senderAccountId int64, receiv
 
 func (service *AccountsService) SettlePayment(
 	ctx context.Context,
+	idempotencyKey pgtype.UUID,
 	accountTransactionId int64,
 	senderAccountId int64,
 	receiverAccountId int64,
@@ -212,6 +254,8 @@ func (service *AccountsService) SettlePayment(
 	_, err = createTransactionLedgerEntry(
 		ctx,
 		queries,
+		idempotencyKey,
+		false,
 		false,
 		accountTransactionId,
 		receiverAccountId,
@@ -220,6 +264,13 @@ func (service *AccountsService) SettlePayment(
 	)
 
 	if err != nil {
+		constrainErr := isConstraintError("transactions_ledger_idempotency_key_check", err)
+
+		if constrainErr {
+			log.Printf("Payment has already been settled - dropping message")
+			return nil
+		}
+
 		return fmt.Errorf("Failed to create ledger entry for receiver: %w", err)
 	}
 
@@ -244,6 +295,7 @@ func (service *AccountsService) SettlePayment(
 
 func (service *AccountsService) RejectFraudPayment(
 	ctx context.Context,
+	indempotencyKey pgtype.UUID,
 	accountTransactionId int64,
 	senderAccountId int64,
 	receiverAccountId int64,
@@ -262,6 +314,8 @@ func (service *AccountsService) RejectFraudPayment(
 	_, err = createTransactionLedgerEntry(
 		ctx,
 		queries,
+		indempotencyKey,
+		true,
 		false,
 		accountTransactionId,
 		senderAccountId,
@@ -270,6 +324,13 @@ func (service *AccountsService) RejectFraudPayment(
 	)
 
 	if err != nil {
+		constrainErr := isConstraintError("transactions_ledger_idempotency_key_check", err)
+
+		if constrainErr {
+			log.Printf("Payment has already been rejected - dropping message")
+			return nil
+		}
+
 		return fmt.Errorf("Failed to create ledger entry to return amount back to sender: %w", err)
 	}
 
@@ -288,7 +349,17 @@ func (service *AccountsService) RejectFraudPayment(
 		return fmt.Errorf("Failed to update recievers balance: %w", err)
 	}
 
-	// 6. commit
 	tx.Commit(ctx)
 	return nil
+}
+
+func isConstraintError(constraintName string, err error) bool {
+	var pgError *pgconn.PgError
+
+	if errors.As(err, &pgError) {
+		if pgError.Code == pgerrcode.UniqueViolation && pgError.ConstraintName == constraintName {
+			return true
+		}
+	}
+	return false
 }

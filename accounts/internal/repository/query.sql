@@ -28,8 +28,8 @@ SET status = $2
 WHERE id = $1;
 
 -- name: CreateTransactionLedgerEntry :one
-INSERT INTO transactions_ledger (transaction_id, account_id, other_party_account_id, amount_in_pennies)
-VALUES ($1, $2, $3, $4)
+INSERT INTO transactions_ledger (idempotency_key, is_compensating_txn, transaction_id, account_id, other_party_account_id, amount_in_pennies)
+VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING id;
 
 -- name: GetTransactionLedgerEntries :many
@@ -40,3 +40,8 @@ FROM transactions_ledger ledger
 INNER JOIN accounts other_party ON ledger.other_party_account_id = other_party.id
 INNER JOIN transactions txn ON ledger.transaction_id = txn.id
 WHERE ledger.account_id = $1;
+
+-- name: DuplicatePaymentCheck :one
+SELECT id FROM transactions_ledger
+WHERE account_id = $1 AND idempotency_key = $2
+FOR UPDATE;

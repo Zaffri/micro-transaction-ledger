@@ -56,7 +56,11 @@ export const getAccounts = async (): Promise<{ data: Account[] } | { error: stri
   }
 };
 
-export const makePayment = async (sender: number, amount: number): Promise<{ success: boolean } | { error: string }> => {
+export const makePayment = async (
+  idempotencyKey: string,
+  sender: number,
+  amount: number
+): Promise<{ success: boolean } | { error: string }> => {
   if (sender <= 0) {
     // TODO: show err message
     return { error: 'Missing transfer direction: please select transfer details' };
@@ -72,6 +76,9 @@ export const makePayment = async (sender: number, amount: number): Promise<{ suc
       `${API_GATEWAY}${ACCOUNTS_ENDPOINT}/payment`,
       {
         method: 'POST',
+        headers: {
+          'Idempotency-Key': idempotencyKey
+        },
         body: JSON.stringify({
           senderAccountId: sender,
           receiverAccountId: sender == 1 ? 2 : 1,

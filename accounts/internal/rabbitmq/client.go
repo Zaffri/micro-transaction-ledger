@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 
+	"github.com/jackc/pgx/v5/pgtype"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
@@ -91,11 +92,12 @@ func (client *RabbitMQClient) PublishPayment(ctx context.Context, routingKey str
 }
 
 type FraudResultMessage struct {
-	FraudPass            bool  `json:"fraud_pass"`
-	AccountTransactionId int64 `json:"account_transaction_id"`
-	SenderAccountId      int64 `json:"sender_account_id"`
-	ReceiverAccountId    int64 `json:"receiver_account_id"`
-	AmountInPennies      int64 `json:"amount_in_pennies"`
+	IdempotencyKey       pgtype.UUID `json:"idempotency_key"`
+	FraudPass            bool        `json:"fraud_pass"`
+	AccountTransactionId int64       `json:"account_transaction_id"`
+	SenderAccountId      int64       `json:"sender_account_id"`
+	ReceiverAccountId    int64       `json:"receiver_account_id"`
+	AmountInPennies      int64       `json:"amount_in_pennies"`
 }
 
 func (client *RabbitMQClient) Close() {
