@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type PaymentRequest struct {
@@ -23,12 +24,28 @@ func (handler *AccountHandler) PaymentHandler(ctx *gin.Context) {
 		return
 	}
 
-	log.Printf("paymentRequest %v", paymentRequest)
+	idempotencyKey := ctx.GetHeader("Idempotency-Key")
+
+	if idempotencyKey == "" {
+		log.Printf("Request missing idempotency key: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Idempotency-Key must be provided"})
+		return
+	}
+
+	var idempotencyKeyUuid pgtype.UUID
+	err = idempotencyKeyUuid.Scan(idempotencyKey)
+
+	if err != nil {
+		log.Printf("Invalid idempotency key - must be UUID: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Idempotency-Key is invalid UUID"})
+		return
+	}
 
 	// Note: no auth/ownership checks for simplicity - obviously wouldn't do this in real project
 
 	err = handler.AccountsService.StartPayment(
 		ctx,
+		idempotencyKeyUuid,
 		paymentRequest.SenderAccountId,
 		paymentRequest.ReceiverAccountId,
 		paymentRequest.AmountInPennies,

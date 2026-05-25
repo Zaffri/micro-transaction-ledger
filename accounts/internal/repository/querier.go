@@ -12,6 +12,7 @@ type Querier interface {
 	CreateAccount(ctx context.Context, arg CreateAccountParams) (CreateAccountRow, error)
 	CreateTransaction(ctx context.Context, arg CreateTransactionParams) (CreateTransactionRow, error)
 	CreateTransactionLedgerEntry(ctx context.Context, arg CreateTransactionLedgerEntryParams) (int64, error)
+	DuplicatePaymentCheck(ctx context.Context, arg DuplicatePaymentCheckParams) (int64, error)
 	GetAccount(ctx context.Context, id int64) (Account, error)
 	GetAccountForUpdate(ctx context.Context, id int64) (Account, error)
 	GetTransactionLedgerEntries(ctx context.Context, accountID int64) ([]GetTransactionLedgerEntriesRow, error)

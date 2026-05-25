@@ -20,10 +20,15 @@ func SetupPaymentSettleWorker(ctx context.Context, rabbitClient *RabbitMQClient,
 			continue
 		}
 
-		log.Printf("PERFORM PAYMENT SETTLE HERE....")
+		if !messageBody.IdempotencyKey.Valid {
+			log.Printf("Payment settle - idempotency key is not valid, cant continue: %v", messageBody.IdempotencyKey)
+			message.Nack(false, false)
+			continue
+		}
 
 		err = accountsService.SettlePayment(
 			ctx,
+			messageBody.IdempotencyKey,
 			messageBody.AccountTransactionId,
 			messageBody.SenderAccountId,
 			messageBody.ReceiverAccountId,
@@ -53,8 +58,15 @@ func SetupPaymentFraudWorker(ctx context.Context, rabbitClient *RabbitMQClient, 
 			continue
 		}
 
+		if !messageBody.IdempotencyKey.Valid {
+			log.Printf("Payment settle - idempotency key is not valid, cant continue: %v", messageBody.IdempotencyKey)
+			message.Nack(false, false)
+			continue
+		}
+
 		err = accountsService.RejectFraudPayment(
 			ctx,
+			messageBody.IdempotencyKey,
 			messageBody.AccountTransactionId,
 			messageBody.SenderAccountId,
 			messageBody.ReceiverAccountId,

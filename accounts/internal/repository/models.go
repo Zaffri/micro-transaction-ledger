@@ -76,6 +76,8 @@ type TransactionsLedger struct {
 	TransactionID       int64
 	AccountID           int64
 	OtherPartyAccountID int64
+	IdempotencyKey      pgtype.UUID
+	IsCompensatingTxn   bool
 	AmountInPennies     int64
 	CreatedAt           pgtype.Timestamptz
 }

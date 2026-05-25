@@ -106,6 +106,8 @@ func seedData(ctx context.Context, txn pgx.Tx) error {
 		return err
 	}
 
+	idempotencyKey := "3b886308-9312-4178-a7fe-b77486732b77"
+
 	// entry for account 1
 	var ledgerEntryOneSenderId int64
 	err = txn.QueryRow(
@@ -114,6 +116,8 @@ func seedData(ctx context.Context, txn pgx.Tx) error {
 		transactionOneId,
 		userOneAccountId,
 		userTwoAccountId,
+		idempotencyKey,
+		false,
 		-300,
 	).Scan(&ledgerEntryOneSenderId)
 
@@ -129,6 +133,8 @@ func seedData(ctx context.Context, txn pgx.Tx) error {
 		transactionOneId,
 		userTwoAccountId,
 		userOneAccountId,
+		idempotencyKey,
+		false,
 		300,
 	).Scan(&ledgerEntryOneReceiverId)
 
