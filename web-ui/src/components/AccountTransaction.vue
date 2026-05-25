@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import TransactionStatusLabel from './TransactionStatusLabel.vue';
-import type { StatementLine } from '@/App.vue';
+import type { StatementLine } from '@/data/api';
 
 
 interface Props {
