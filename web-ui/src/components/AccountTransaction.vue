@@ -36,6 +36,19 @@ const amount = computed(() => {
   return formatter.format(pounds);
 });
 
+const createdAt = computed(() => {
+  const date = new Date(props.statement.CreatedAt);
+  return date.toLocaleString('en-GB', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true
+  });
+});
+
 </script>
 
 <template>
@@ -45,7 +58,7 @@ const amount = computed(() => {
     <div class="flex flex-1 items-center gap-4 min-w-0">
     
       <div class="shrink-0 text-xs font-semibold tracking-wide text-slate-400 w-25">
-        {{ new Date(props.statement.CreatedAt).toDateString() }}
+        {{ createdAt }}
       </div>
 
       <div class="flex flex-wrap items-center gap-2 min-w-0">
