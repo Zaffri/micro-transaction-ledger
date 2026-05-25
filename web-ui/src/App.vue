@@ -55,6 +55,7 @@ const handlePayment = async (senderId: number, amount: number) => {
 
   if (accounts.value[positionInAccounts]) {
     const optimisticUpdate: StatementLine = {
+      ID: -1,
       Status: 'pending',
       AmountInPennies: amount,
       OtherPartyName: otherPartyName,
@@ -82,7 +83,7 @@ onMounted(() => {
     <PaymentControls :make-payment="handlePayment" />
 
     <main class="flex min-h-0 flex-1 px-4 pb-4 pt-3 gap-4 bg-slate-100/60">
-      <AccountPane v-for="account in accounts" :is-loading="isLoading" :account="account" />
+      <AccountPane v-for="account in accounts" :key="account.ID" :is-loading="isLoading" :account="account" />
     </main>
   </div>
 </template>

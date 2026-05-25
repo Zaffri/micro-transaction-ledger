@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, Suspense } from 'vue';
+import { computed } from 'vue';
 import AccountTransaction from './AccountTransaction.vue';
 import type { Account } from '@/data/api';
 
@@ -34,10 +34,13 @@ const balance = computed<number | string>(() => {
           </span>
         </div>
 
-        <AccountTransaction 
-          v-for="transaction in account.Statement"
-          :statement="transaction"
-        />
+        <TransitionGroup tag="div" name="statement-line">
+          <AccountTransaction
+            v-for="transaction in account.Statement"
+            :key="transaction.ID"
+            :statement="transaction"
+          />
+        </TransitionGroup>
       </div>
 
       <div v-else>
@@ -59,15 +62,28 @@ const balance = computed<number | string>(() => {
 .custom-scrollbar::-webkit-scrollbar {
   width: 8px;
 }
+
 .custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }
+
 .custom-scrollbar::-webkit-scrollbar-thumb {
   background: var(--color-slate-200, #e2e8f0);
   border-radius: 9999px;
 }
+
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: var(--color-slate-300, #cbd5e1);
 }
 
+:deep(.statement-line-enter-active,
+.statement-line-leave-active) {
+  transition: all 0.5s ease;
+}
+
+:deep(.statement-line-enter-from,
+.statement-line-leave-to) {
+  opacity: 0;
+  transform: translateX(30px);
+}
 </style>

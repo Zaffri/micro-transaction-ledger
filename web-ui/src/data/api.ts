@@ -2,6 +2,7 @@ const API_GATEWAY = 'http://localhost:8080'
 const ACCOUNTS_ENDPOINT = '/accounts'
 
 export interface StatementLine {
+  ID: number;
   Status: 'settled' | 'rejected_fraud' | 'pending';
   AmountInPennies: number;
   OtherPartyName: string;
