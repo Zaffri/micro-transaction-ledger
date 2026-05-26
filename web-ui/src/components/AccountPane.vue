@@ -17,8 +17,14 @@ const accountTitle = computed<string>(() => {
 
 const balance = computed<number | string>(() => {
   if (!props.account) return '--';
-  // TODO: formatting...
-  return props.account.BalanceInPennies;
+  
+  const formatter = new Intl.NumberFormat('en-GB', {
+    style: 'currency',
+    currency: 'GBP',
+  });
+
+  const pounds = props.account.BalanceInPennies / 100;
+  return formatter.format(pounds);
 });
 
 </script>

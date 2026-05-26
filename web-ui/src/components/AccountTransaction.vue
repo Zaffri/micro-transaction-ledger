@@ -17,6 +17,10 @@ const transactionType = computed(() => {
 const description = computed(() => {
   const otherParty = props.statement.OtherPartyName
   
+  if (props.statement.Status === 'rejected_fraud' && props.statement.AmountInPennies > 0) {
+    return 'Reversal';
+  }
+
   if (transactionType.value === 'credit') {
     return `Transfer from ${otherParty}`
   }
@@ -62,7 +66,7 @@ const createdAt = computed(() => {
       </div>
 
       <div class="flex flex-wrap items-center gap-2 min-w-0">
-        <TransactionStatusLabel :status="props.statement.Status" />
+        <TransactionStatusLabel :status="props.statement.Status" :amount-in-pennies="props.statement.AmountInPennies" />
 
         <span class="text-sm font-medium text-slate-600 truncate max-w-[200px] sm:max-w-xs">
           {{ description }}

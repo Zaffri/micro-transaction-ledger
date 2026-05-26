@@ -20,7 +20,7 @@ func (handler *AccountHandler) PaymentHandler(ctx *gin.Context) {
 
 	if err != nil {
 		log.Printf("Invalid payment request body: %v", err)
-		ctx.Status(400)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return
 	}
 

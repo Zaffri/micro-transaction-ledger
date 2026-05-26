@@ -12,7 +12,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type OutboxManager interface {
@@ -24,9 +23,14 @@ type OutboxManager interface {
 	) error
 }
 
+type PgxIface interface {
+	Begin(context.Context) (pgx.Tx, error)
+	Close()
+}
+
 type AccountsService struct {
-	Db      *pgxpool.Pool
-	Queries *repository.Queries // sqlc
+	Db      PgxIface
+	Queries repository.DbQueries
 	OutboxManager
 }
 
@@ -136,7 +140,7 @@ func (service *AccountsService) StartPayment(ctx context.Context, idempotencyKey
 
 func updateAccountBalance(
 	ctx context.Context,
-	queries *repository.Queries,
+	queries repository.Querier,
 	accountId int64,
 	amountInPennies int64,
 	isDebit bool,
@@ -170,7 +174,7 @@ func updateAccountBalance(
 
 func createAccountTransaction(
 	ctx context.Context,
-	queries *repository.Queries,
+	queries repository.Querier,
 	senderAccountId int64,
 	description string,
 ) (repository.CreateTransactionRow, error) {
@@ -183,7 +187,7 @@ func createAccountTransaction(
 
 func createTransactionLedgerEntry(
 	ctx context.Context,
-	queries *repository.Queries,
+	queries repository.Querier,
 	indempotencyKey pgtype.UUID,
 	isCompensatingTxn bool,
 	isDebit bool,

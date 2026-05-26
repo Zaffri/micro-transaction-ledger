@@ -1,13 +1,18 @@
 <script setup lang="ts">
 
 interface Props {
-  makePayment: (sender: number, amount: number) => void;
+  makePayment: (sender: number, amount: number) => Promise<void>;
   resetIdempotencyKey: () => void;
 }
 
 const props = defineProps<Props>();
 const senderId = defineModel<number>('senderId', { default: -1 });
 const amount = defineModel<number>('amount', { default: 0 });
+
+const resetForm = () => {
+  senderId.value = -1
+  amount.value = 0
+};
 </script>
 
 <template>
@@ -52,7 +57,7 @@ const amount = defineModel<number>('amount', { default: 0 });
           </div>
         </div>
 
-        <button @click="makePayment(senderId, amount)" class="inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-blue-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-900 shadow-xs">
+        <button @click="makePayment(senderId, amount).then(() => resetForm())" class="inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-blue-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-900 shadow-xs">
           <span>Send</span>
         </button>
       </div>
