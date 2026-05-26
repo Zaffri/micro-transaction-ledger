@@ -149,6 +149,7 @@ FROM transactions_ledger ledger
 INNER JOIN accounts other_party ON ledger.other_party_account_id = other_party.id
 INNER JOIN transactions txn ON ledger.transaction_id = txn.id
 WHERE ledger.account_id = $1
+ORDER BY ledger.created_at DESC
 `
 
 type GetTransactionLedgerEntriesRow struct {

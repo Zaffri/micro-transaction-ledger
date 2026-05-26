@@ -31,7 +31,7 @@ const startPolling = () => {
 
   pollingTimer.value = setInterval(() => {
     getData();
-  }, 10000);
+  }, 2000);
 };
 
 const stopPolling = () => {
@@ -47,11 +47,12 @@ const resetIdempotencyKey = () => idempotencyKey.value = crypto.randomUUID();
 const handlePayment = async (senderId: number, amount: number) => {
   const positionInAccounts = accounts.value.findIndex(account => account.ID === senderId);
   if (positionInAccounts === -1) return;
+  const amountInPennies = Math.round(amount * 100);
 
   stopPolling();
 
-  const result = await makePayment(idempotencyKey.value, senderId, amount);
-  const otherPartyIndex = positionInAccounts === 1 ? 2 : 1;
+  const result = await makePayment(idempotencyKey.value, senderId, amountInPennies);
+  const otherPartyIndex = positionInAccounts === 1 ? 0 : 1;
   const otherPartyName = (accounts.value[otherPartyIndex]) ? accounts.value[otherPartyIndex].AccountHolderName : '';
 
   // TODO: handle error
@@ -60,7 +61,7 @@ const handlePayment = async (senderId: number, amount: number) => {
     const optimisticUpdate: StatementLine = {
       ID: -1,
       Status: 'pending',
-      AmountInPennies: amount,
+      AmountInPennies: -amountInPennies,
       OtherPartyName: otherPartyName,
       CreatedAt: new Date().toDateString()
     }
@@ -68,7 +69,6 @@ const handlePayment = async (senderId: number, amount: number) => {
     accounts.value[positionInAccounts].Statement.unshift(optimisticUpdate)
   }
 
-  console.log(result);
   startPolling();
 };
 
