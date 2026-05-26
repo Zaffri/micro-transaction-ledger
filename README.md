@@ -2,20 +2,21 @@
 
 An event-driven distributed banking ledger utilising microservices written in Go. User's can transfer money between accounts where operations are safely managed across backend services using a choreographed saga pattern (asynchronous messaging) ensuring data is rolledback in the event of a failure. Duplicate payments and processing is prevented using idempotency keys.
 
+<img src="docs/demo.gif" alt="End-to-end preview of successful and fraud transfers" style="width: 100%; max-width: 800px;">
 
-TODO: add screenshot/GIF of UI demo
+_End-to-end preview of successful and fraud transfers._
 
 ## Basic requirements
 - Payments between accounts
 - Immutable ledger (audit trail)
-- Simple transaction statuses with reasoning; Pending, Rejected_Fraud, Authorised
+- Transaction statuses (3 for simplicity), rejected_fraud, settled
 - Idempotency; prevention of payment duplication or processes
 - Demo UI for sending payments and for end-to end visualisation purposes
 - Some concepts to implement: microservices, choreographed saga pattern (async messaging), outbox pattern, idempotency, optimistic updates etc
 
 ## Design
 
-A microservice architecture using synchronous and asynchronous communication. There are two Go microservices (Accounts and Fraud). Each have their own database and have access to the message broker for publishing and subscribing to messages. 
+A microservice architecture using synchronous and asynchronous communication. There are two Go microservices (Accounts and Fraud). Each have their own databases and have access to the message broker for publishing and subscribing to messages. 
 
 The high-level architecture, payment flow and data design are documented below.
 
@@ -35,7 +36,7 @@ The high-level architecture, payment flow and data design are documented below.
 All services run inside docker containers using docker-compose. The only prerequisite should be that you have docker installed. Then you can simply run:
 
 ```bash
-docker compose build
+docker compose up
 ```
 
 You can then visit the frontend here:
@@ -43,8 +44,6 @@ You can then visit the frontend here:
 ```bash
 http://localhost:8080
 ```
-
-Note: some of the database migration/seeding at the moment needs improvements - you may run into issues when rerunning them twice. This is on the list for me to fix, the current implementation is a bit niave. You can simply rebuild if you run into any issues.
 
 ## Testing
 
@@ -84,22 +83,26 @@ sqlc generate
 
 You can configure where the migration and query files live inside `sqlc.yaml`.
 
+Note: some of the database migration/seeding at the moment needs improvements - you may run into issues when rerunning them twice. This is on the list for me to fix, the current implementation is a bit niave. You can simply rebuild if you run into any issues.
+
 ## Future additions
 
 ### Known Issues
-- There's no authentication or authorisation. However, this was intentional as the main focus of the project was to build the base features and focus on the various system design techniques. It could be a future addition though.
-- Currency GBP is assumed
+- There's no authentication or authorisation. However, this was intentional as this was a learning project and the main focus of the project was to build the base features and focus on the various system design techniques. It could be a future addition though.
 - Lack of error handling on demo frontend - users should be shown user-friendly errors when something goes wrong.
 - Current migration process is limited and can only be run once. In development this may result in having to rebuild the container.
 - In development Nginx may restart if a downstream service is down - obviously would not be suitable for the real world but not as a big deal for dev.
+- Currency GBP is assumed
 
 ### Todo: next features/changes
 - Replace current migration program with golang-migrate to enhance development experience
 - Add dead letter queues for failed messages - ability to investigate and then replay
 - Add delayed retry mechanisms (exponential backoff) and look into circuit breakers?
+- Look into RabbitMQ consistent hashing exchange for ensuring message order and preventing race conditions at queue level
 - Enhance status response codes and errors from unhappy paths
 - Utilise Goroutines where appropriate - add worker pool pattern for job queues. They have single worker at the moment.
 - Increase test coverage
+- Add correlation/tracing IDs for logging
 - Add missing some timeouts via context where appropriate
 - Update services to use gRPC (internal comms only)
 - Demo frontend: handle errors in friendly manner
