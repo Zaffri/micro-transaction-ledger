@@ -4,6 +4,7 @@
 ![](https://img.shields.io/badge/-white.svg?logo=rabbitmq&logoColor=#FF6600)
 ![](https://img.shields.io/badge/-%23316192.svg?logo=postgresql&logoColor=white)
 ![](https://img.shields.io/badge/-%232496ED.svg?logo=docker&logoColor=white)
+![](https://img.shields.io/badge/-%2335495e.svg?logo=vue.js&logoColor=#234FC08D)
 
 An event-driven distributed banking ledger utilising microservices written in Go. User's can transfer money between accounts where operations are safely managed across backend services using a choreographed saga pattern (asynchronous messaging) ensuring data is rolledback in the event of a failure. Duplicate payments and processing is prevented using idempotency keys.
 
@@ -14,7 +15,7 @@ _End-to-end preview of successful and fraud transfers._
 ## Basic requirements
 - Payments between accounts
 - Immutable ledger (audit trail)
-- Transaction statuses (3 for simplicity), rejected_fraud, settled
+- Transaction statuses (3 for simplicity); pending, rejected_fraud, settled
 - Idempotency; prevention of payment duplication or processes
 - Demo UI for sending payments and for end-to end visualisation purposes
 - Some concepts to implement: microservices, choreographed saga pattern (async messaging), outbox pattern, idempotency, optimistic updates etc
@@ -32,7 +33,7 @@ The high-level architecture, payment flow and data design are documented below.
 * **Gin**: chosen web framework - it offers some features that make building APIs easier over just using the standard library.
 * **RabbitMQ**: it's popular, met my requirements (pub/sub with persistence) and had great documentation.
 * **River**: I required a relay for implementing the outbox pattern for reliability, this library was capable of that without me having to build one from scratch, and it had great support for the database I was using straight out of the box.
-* **PostgreSQL**: atomicity support - for a banking ledger accuracy is important so I wanted to use a relation database that was ACID compliant.
+* **PostgreSQL**: atomicity support - for a banking ledger accuracy is important so I wanted to use a relational database that was ACID compliant.
 * **SQLC**: I wanted fine grained control of my SQL statements so I avoided an ORM. But at the same time I didn't want to write everything manually as it could be slow and tedious, SQLC seemed to be the perfect inbetween. It generates Go code based off of my raw SQL statements, speeding up development.
 * **Vue.js/tailwind CSS**: this was used to build the frontend demo: for visualising and testing the payment process end-to end. Vue allowed me to build the UI using components in a reactive manner - this enabled me to easily reuse code and build quickly. Tailwind CSS offers pre-built CSS classes which I used without having to write them from scratch. Meaning I had more time to focus on the business logic of the project.
 
@@ -71,7 +72,7 @@ While developing you can run the stack using `watch` which will make the contain
 docker compose watch
 ```
 
-The RabbitMQ management dashboard is good for troubleshooting queues/messsages. You can even fire adhoc messages on to the queue for testing. You can access it here: `http://localhost:8080/queue`
+The RabbitMQ management dashboard is good for troubleshooting queues/messages. You can even fire adhoc messages on to the queue for testing. You can access it here: `http://localhost:8080/queue`
 
 Default credentials
 
@@ -80,7 +81,7 @@ Username: guest
 Password: guest
 ```
 
-SQLC was used for generate Go code for my SQL queries. The process is as follows; write the raw SQL inside the queries `query.sql` and migration files then run the follow command to generate the code.
+SQLC was used for generating Go code for my SQL queries. The process is as follows; write the raw SQL inside the queries `query.sql` and migration files then run the following command to generate the code.
 
 ```bash
 sqlc generate
@@ -96,8 +97,8 @@ Note: some of the database migration/seeding at the moment needs improvements - 
 - There's no authentication or authorisation. However, this was intentional as this was a learning project and the main focus of the project was to build the base features and focus on the various system design techniques. It could be a future addition though.
 - Lack of error handling on demo frontend - users should be shown user-friendly errors when something goes wrong.
 - Current migration process is limited and can only be run once. In development this may result in having to rebuild the container.
-- In development Nginx may restart if a downstream service is down - obviously would not be suitable for the real world but not as a big deal for dev.
-- Currency GBP is assumed
+- In development Nginx may restart if a downstream service is down - obviously would not be suitable for the real world but not a big deal for dev.
+- Single currency support - GBP is assumed
 
 ### Todo: next features/changes
 - Replace current migration program with golang-migrate to enhance development experience
@@ -108,7 +109,7 @@ Note: some of the database migration/seeding at the moment needs improvements - 
 - Utilise Goroutines where appropriate - add worker pool pattern for job queues. They have single worker at the moment.
 - Increase test coverage
 - Add correlation/tracing IDs for logging
-- Add missing some timeouts via context where appropriate
+- Add some timeouts via context where appropriate
 - Update services to use gRPC (internal comms only)
 - Demo frontend: handle errors in friendly manner
 - Additional business logic for payments e.g. take into account overdrafts etc.
