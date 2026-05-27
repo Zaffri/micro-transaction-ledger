@@ -1,5 +1,10 @@
 # Micro Transaction Ledger
 
+![](https://img.shields.io/badge/-%2300ADD8.svg?logo=go&logoColor=white)
+![](https://img.shields.io/badge/-white.svg?logo=rabbitmq&logoColor=#FF6600)
+![](https://img.shields.io/badge/-%23316192.svg?logo=postgresql&logoColor=white)
+![](https://img.shields.io/badge/-%232496ED.svg?logo=docker&logoColor=white)
+
 An event-driven distributed banking ledger utilising microservices written in Go. User's can transfer money between accounts where operations are safely managed across backend services using a choreographed saga pattern (asynchronous messaging) ensuring data is rolledback in the event of a failure. Duplicate payments and processing is prevented using idempotency keys.
 
 <img src="docs/demo.gif" alt="End-to-end preview of successful and fraud transfers" style="width: 100%; max-width: 800px;">
